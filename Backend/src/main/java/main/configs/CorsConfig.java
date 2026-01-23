@@ -1,4 +1,4 @@
-package Database;
+package main.configs;
 
 
 import org.springframework.context.annotation.Configuration;
