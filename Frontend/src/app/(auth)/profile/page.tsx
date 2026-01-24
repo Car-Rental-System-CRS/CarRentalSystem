@@ -1,5 +1,5 @@
 import SignOutForm from '@/components/SignOutForm';
-import { auth } from '@/libs/auth';
+import { auth } from '@/lib/auth';
 import Image from 'next/image';
 
 export default async function ProfilePage() {
@@ -9,7 +9,7 @@ export default async function ProfilePage() {
   const { user } = session;
   if (!user) return null;
 
-  const { name, email, image } = user;
+  const { name, email } = user;
 
   return (
     <div>
@@ -21,7 +21,6 @@ export default async function ProfilePage() {
       <div className="flex flex-col place-items-center my-3">
         <p>Name: {name}</p>
         <p>Email: {email}</p>
-        <Image src={image!} alt={name!} width={280} height={280} />
         <SignOutForm />
       </div>
     </div>
