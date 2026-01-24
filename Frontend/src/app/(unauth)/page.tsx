@@ -1,4 +1,4 @@
-import { auth } from '@/libs/auth';
+import { auth } from '@/lib/auth';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -16,12 +16,12 @@ export default async function IndexPage() {
   const session = await auth();
 
   return (
-    <div className="text-center">
+    <div>
       <h1>Index Page</h1>
       <p className="my-3 text-zinc-300">
         This is the index page of unauth routes. This may be the landing page
       </p>
-      <div className="flex gap-3 justify-center">
+      <div>
         {session ? (
           <Link href="/profile" className="primary-btn">
             Profile

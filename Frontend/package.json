@@ -11,13 +11,23 @@
     "format": "next lint --fix && prettier '**/*.{json,yaml}' --write --ignore-path .gitignore"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
     "axios": "^1.13.2",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
     "next": "^16.0.10",
     "next-auth": "^5.0.0-beta.25",
+    "next-themes": "^0.4.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwind-merge": "^2.3.0"
+    "react-hook-form": "^7.71.1",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.3.0",
@@ -37,6 +47,5 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.18.0"
-  },
-  "author": "Nhan Luong"
+  }
 }

@@ -1,4 +1,4 @@
-import { getServerUrl } from '@/utils/helpers';
+import { getServerUrl } from '@/lib/utils';
 import axios from 'axios';
 
 const instance = axios.create({
