@@ -26,7 +26,7 @@ export default function RootLayout({
       <body
         className={cn(
           inter.className,
-          'bg-dark text-white min-h-screen m-0 flex place-items-center min-w-[320px]'
+          'bg-dark text-white min-h-screen m-0 flex place-items-center min-w-[320px] asdasd'
         )}
       >
         {children}
