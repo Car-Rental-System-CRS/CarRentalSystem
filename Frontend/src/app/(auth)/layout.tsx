@@ -1,4 +1,4 @@
-import { auth } from '@/libs/auth';
+import { auth } from '@/lib/auth';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import React from 'react';
