@@ -33,20 +33,13 @@ export default function HeroSection() {
           <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-6 max-w-5xl mx-auto">
             <Tabs defaultValue="self-drive" className="w-full">
               {/* Enhanced Tabs with better hover */}
-              <TabsList className="grid w-full grid-cols-3 mb-16 bg-white p-2 rounded-2xl gap-1">
+              <TabsList className="grid w-full grid-cols-2 mb-16 bg-white p-2 rounded-2xl gap-2">
                 <TabsTrigger
                   value="self-drive"
                   className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-5 px-8 text-lg font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 group"
                 >
                   <Car className="w-6 h-6 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span className="whitespace-nowrap">Self-drive</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="with-driver"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl py-5 px-8 text-lg font-semibold text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 group"
-                >
-                  <Users className="w-6 h-6 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                  <span className="whitespace-nowrap">With driver</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="long-term"
@@ -198,7 +191,7 @@ export default function HeroSection() {
                       <div className="flex items-center justify-between">
                         <div className="text-center flex-1">
                           <div className="text-xl font-bold text-gray-900 group-hover:text-blue-600">
-                            From 1 month
+                            From 1 day
                           </div>
                           <div className="text-sm text-gray-500 mt-2 group-hover:text-gray-700">
                             Minimum period
@@ -209,7 +202,7 @@ export default function HeroSection() {
                         </div>
                         <div className="text-center flex-1">
                           <div className="text-xl font-bold text-gray-900 group-hover:text-blue-600">
-                            Up to 12 months
+                            Up to 7 days
                           </div>
                           <div className="text-sm text-gray-500 mt-2 group-hover:text-gray-700">
                             Maximum period
