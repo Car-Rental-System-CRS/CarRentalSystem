@@ -3,7 +3,6 @@ import { Metadata } from 'next';
 import AboutHero from './components/AboutHero';
 import AboutMission from './components/AboutMission';
 import AboutStats from './components/AboutStats';
-import ServicesSection from '../components/serviceSection';
 
 export const metadata: Metadata = {
   title: 'About Us - Car Rental System',
@@ -16,7 +15,6 @@ export default function AboutUsPage() {
       <AboutHero />
       <AboutMission />
       <AboutStats />
-      <ServicesSection />
     </main>
   );
 }

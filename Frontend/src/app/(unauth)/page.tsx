@@ -3,7 +3,6 @@ import { Metadata } from 'next';
 
 import HeroSection from './components/heroSection';
 import CarsSection from './components/carSection';
-import ServicesSection from './components/serviceSection';
 import FeaturesSection from './components/featureSection';
 import RentalStepsSection from './components/rentalStepSection';
 import AboutSection from './components/aboutSection';
@@ -28,7 +27,6 @@ export default async function HomePage() {
       <HeroSection />
       <CarsSection />
       <FeaturesSection />
-      <ServicesSection />
       <RentalStepsSection />
       <AboutSection />
     </div>
