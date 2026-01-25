@@ -39,16 +39,6 @@ export default function Header() {
               About Mioto
             </Link>
 
-            <Link
-              href="/aboutDriver"
-              className={cn(
-                'text-gray-800 hover:text-blue-600 transition-colors text-lg font-medium',
-                pathname === '/aboutDriver' && 'text-blue-600 font-semibold'
-              )}
-            >
-              Become a Driver
-            </Link>
-
             {/* Divider */}
             <div className="h-8 w-px bg-gray-300"></div>
 
