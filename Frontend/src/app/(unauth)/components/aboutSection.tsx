@@ -1,4 +1,5 @@
 import { Car } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AboutAndHostSection() {
   return (
@@ -19,7 +20,7 @@ export default function AboutAndHostSection() {
 
           {/* Content */}
           <div>
-            <h2 className="text-4xl font-bold mb-6">
+            <h2 className="text-4xl font-bold mb-6 hover:underline cursor-pointer">
               Want to know more <br /> about Mioto?
             </h2>
 
@@ -29,10 +30,11 @@ export default function AboutAndHostSection() {
               aims to build a trustworthy and civilized car-sharing community in
               Vietnam.
             </p>
-
-            <button className="bg-green-500 hover:bg-green-600 transition text-white px-8 py-3 rounded-xl font-semibold">
-              Learn more
-            </button>
+            <Link href="/aboutUs">
+              <button className="bg-green-500 hover:bg-green-600 transition text-white px-8 py-3 rounded-xl font-semibold">
+                Learn more
+              </button>
+            </Link>
           </div>
         </div>
       </div>
