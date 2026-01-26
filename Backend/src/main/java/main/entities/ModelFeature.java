@@ -17,10 +17,10 @@ public class ModelFeature {
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "type_id", nullable = false)
-    private Type type;
+    private CarType carType;
 
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "feature_id", nullable = false)
-    private Feature feature;
+    private CarFeature carFeature;
 }

@@ -15,6 +15,6 @@ import java.util.UUID;
 @EqualsAndHashCode
 public class ModelFeatureId implements Serializable {
 
-    private UUID type;
-    private UUID feature;
+    private UUID typeId;
+    private UUID featureId;
 }

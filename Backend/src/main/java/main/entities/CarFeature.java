@@ -11,15 +11,16 @@ import java.util.UUID;
 @Setter
 @Getter
 @Builder
-public class Type {
+public class CarFeature {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @Column(nullable = false)
+    private UUID featureId;
 
-    private String name;
+    @Column(nullable = false)
+    private String featureName;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "brand_id", nullable = false)
-    private CarBrand carBrand;
+    @Column(nullable = false)
+    private String featureDescription;
 }
