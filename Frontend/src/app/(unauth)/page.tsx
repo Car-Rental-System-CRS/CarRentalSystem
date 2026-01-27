@@ -1,7 +1,7 @@
 // app/page.tsx
 import { Metadata } from 'next';
 
-import HeroSection from './components/AboutSection';
+import HeroSection from './components/HeroSection';
 import CarsSection from './components/CarSection';
 import FeaturesSection from './components/FeatureSection';
 import RentalStepsSection from './components/RentalStepSection';
