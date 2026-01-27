@@ -3,6 +3,7 @@ package main.dtos.request;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -15,4 +16,5 @@ public class CreateCarTypeRequest {
     // kWh per km
     private double consumptionKwhPerKm;
     private BigDecimal price;
+    private UUID brandId;
 }

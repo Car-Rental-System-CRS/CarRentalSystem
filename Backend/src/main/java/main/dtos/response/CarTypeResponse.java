@@ -3,6 +3,7 @@ package main.dtos.response;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Builder
 public class CarTypeResponse {
+    private UUID typeId;
     private int numberOfSeats;
     private String carName;
     // kWh per km
