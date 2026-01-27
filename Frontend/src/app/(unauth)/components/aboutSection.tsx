@@ -1,7 +1,6 @@
-import { Car } from 'lucide-react';
 import Link from 'next/link';
 
-export default function AboutAndHostSection() {
+export default function AboutSection() {
   return (
     <section className="space-y-16">
       {/* ===== ABOUT MIOTO ===== */}
@@ -30,7 +29,7 @@ export default function AboutAndHostSection() {
               aims to build a trustworthy and civilized car-sharing community in
               Vietnam.
             </p>
-            <Link href="/aboutUs">
+            <Link href="/about-us">
               <button className="bg-green-500 hover:bg-green-600 transition text-white px-8 py-3 rounded-xl font-semibold">
                 Learn more
               </button>
