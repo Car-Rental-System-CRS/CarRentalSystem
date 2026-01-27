@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Car, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -18,11 +19,16 @@ export default function Header() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-              <Car className="w-6 h-6 text-white" />
-            </div>
+            <Image
+              src="/assets/images/logo.jpg"
+              alt="EcoDrive Logo"
+              width={100}
+              height={100}
+              className="rounded-full object-cover"
+              priority
+            />
             <span className="text-3xl font-bold text-blue-700 tracking-tight">
-              MIOTO
+              EcoDrive
             </span>
           </Link>
 

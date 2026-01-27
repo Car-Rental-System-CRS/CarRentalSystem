@@ -1,3 +1,4 @@
+import Header from '@/components/Header';
 import { auth } from '@/lib/auth';
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -20,7 +21,8 @@ export default async function AuthLayout({
 }) {
   const session = await auth();
   return (
-    <div className="text-center mt-0 mx-auto max-w-[1280px]">
+    <div>
+      <Header />
       {session ? (
         children
       ) : (
