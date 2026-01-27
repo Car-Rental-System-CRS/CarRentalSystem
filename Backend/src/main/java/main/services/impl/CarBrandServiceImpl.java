@@ -50,8 +50,8 @@ public class CarBrandServiceImpl implements CarBrandService {
 
         entity.setBrandName(request.getBrandName());
 
-        CarBrand updated = carBrandRepository.save(entity);
-        return modelMapper.map(updated, CarBrandResponse.class);
+        CarBrand saved = carBrandRepository.save(entity);
+        return modelMapper.map(saved, CarBrandResponse.class);
     }
 
     @Override

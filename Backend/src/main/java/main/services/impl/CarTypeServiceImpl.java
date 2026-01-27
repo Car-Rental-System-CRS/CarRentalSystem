@@ -24,7 +24,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     @Override
     public CarTypeResponse create(CreateCarTypeRequest request) {
         CarBrand brand = carBrandRepository.findById(request.getBrandId())
-                .orElseThrow(() -> new IllegalArgumentException("CarBrand not found: " + request.getBrandId()));
+                .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + request.getBrandId()));
 
         CarType entity = CarType.builder()
                 .numberOfSeats(request.getNumberOfSeats())
@@ -41,7 +41,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     @Override
     public CarTypeResponse getById(UUID typeId) {
         CarType entity = carTypeRepository.findById(typeId)
-                .orElseThrow(() -> new IllegalArgumentException("CarType not found: " + typeId));
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found: " + typeId));
         return modelMapper.map(entity, CarTypeResponse.class);
     }
 
@@ -55,10 +55,10 @@ public class CarTypeServiceImpl implements CarTypeService {
     @Override
     public CarTypeResponse update(UUID typeId, CreateCarTypeRequest request) {
         CarType entity = carTypeRepository.findById(typeId)
-                .orElseThrow(() -> new IllegalArgumentException("CarType not found: " + typeId));
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found: " + typeId));
 
         CarBrand brand = carBrandRepository.findById(request.getBrandId())
-                .orElseThrow(() -> new IllegalArgumentException("CarBrand not found: " + request.getBrandId()));
+                .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + request.getBrandId()));
 
         entity.setNumberOfSeats(request.getNumberOfSeats());
         entity.setCarName(request.getCarName());
@@ -73,7 +73,7 @@ public class CarTypeServiceImpl implements CarTypeService {
     @Override
     public void delete(UUID typeId) {
         if (!carTypeRepository.existsById(typeId)) {
-            throw new IllegalArgumentException("CarType not found: " + typeId);
+            throw new IllegalArgumentException("Car type not found: " + typeId);
         }
         carTypeRepository.deleteById(typeId);
     }
