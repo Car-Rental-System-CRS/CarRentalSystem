@@ -86,29 +86,16 @@ export default function Header() {
             <div className="space-y-4">
               {/* Regular nav items */}
               <Link
-                href="/about"
+                href="/about-us"
                 className={cn(
                   'block py-3 px-6 text-lg rounded-lg',
-                  pathname === '/about'
+                  pathname === '/about-us'
                     ? 'bg-blue-50 text-blue-600 font-semibold'
                     : 'text-gray-800 hover:bg-gray-50'
                 )}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                About Mioto
-              </Link>
-
-              <Link
-                href="/host"
-                className={cn(
-                  'block py-3 px-6 text-lg rounded-lg',
-                  pathname === '/host'
-                    ? 'bg-blue-50 text-blue-600 font-semibold'
-                    : 'text-gray-800 hover:bg-gray-50'
-                )}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Become a Host
+                About
               </Link>
 
               {/* Divider in mobile */}
