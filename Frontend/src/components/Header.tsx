@@ -30,10 +30,12 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-8">
             {/* Regular links */}
             <Link
+
               href="/about-us"
               className={cn(
                 'text-gray-800 hover:text-blue-600 transition-colors text-lg font-medium',
                 pathname === '/about-us' && 'text-blue-600 font-semibold'
+
               )}
             >
               About Mioto
