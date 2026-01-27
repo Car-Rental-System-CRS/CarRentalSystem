@@ -1,37 +1,34 @@
-import { auth } from '@/libs/auth';
+// app/page.tsx
 import { Metadata } from 'next';
-import Link from 'next/link';
+
+import HeroSection from './components/heroSection';
+import CarsSection from './components/carSection';
+import FeaturesSection from './components/featureSection';
+import RentalStepsSection from './components/rentalStepSection';
+import AboutSection from './components/aboutSection';
 
 export const metadata: Metadata = {
-  title: 'Index page',
-  description: 'Description of the index page',
+  title: 'Mioto - Self-drive & Travel Car Rental',
+  description:
+    'Self-drive and travel car rental service with affordable prices and simple procedures',
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    // ... add more open graph meta tags
+    title: 'Mioto - Self-drive & Travel Car Rental',
+    description:
+      'Rent 4-seat, 7-seat self-drive and travel cars in Ho Chi Minh City',
+    images: ['/og-image.png'],
   },
 };
 
-export default async function IndexPage() {
-  const session = await auth();
-
+export default async function HomePage() {
   return (
-    <div className="text-center">
-      <h1>Index Page</h1>
-      <p className="my-3 text-zinc-300">
-        This is the index page of unauth routes. This may be the landing page
-      </p>
-      <div className="flex gap-3 justify-center">
-        {session ? (
-          <Link href="/profile" className="primary-btn">
-            Profile
-          </Link>
-        ) : (
-          <Link href="/sign-in" className="primary-btn">
-            Sign in
-          </Link>
-        )}
-      </div>
+    <div className="min-h-screen bg-white">
+      <HeroSection />
+      <CarsSection />
+      <FeaturesSection />
+      <RentalStepsSection />
+      <AboutSection />
     </div>
   );
 }
