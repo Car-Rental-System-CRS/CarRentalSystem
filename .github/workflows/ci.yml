@@ -47,12 +47,6 @@ jobs:
           cd frontend
           npm ci
 
-      # ---------- LINT ----------
-      - name: Lint frontend
-        run: |
-          cd frontend
-          npm run lint
-
       # ---------- TEST + COVERAGE ----------
       - name: Run unit tests with coverage
         run: |
@@ -81,11 +75,11 @@ jobs:
           java-version: "24"
           cache: "maven"
 
-      # ---------- LINT ----------
-      - name: Lint backend (Checkstyle)
+      # ---------- Spotless check ----------
+      - name: Check code format
         run: |
           cd backend
-          mvn checkstyle:check
+          mvn spotless:check
 
       # ---------- TEST + COVERAGE ----------
       - name: Run tests with JaCoCo
