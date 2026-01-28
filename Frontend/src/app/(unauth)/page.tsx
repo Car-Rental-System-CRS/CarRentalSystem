@@ -1,11 +1,13 @@
 // app/page.tsx
 import { Metadata } from 'next';
 
-import HeroSection from './components/heroSection';
-import CarsSection from './components/carSection';
-import FeaturesSection from './components/featureSection';
-import RentalStepsSection from './components/rentalStepSection';
-import AboutSection from './components/aboutSection';
+
+import HeroSection from './components/HeroSection';
+import CarsSection from './components/CarSection';
+import FeaturesSection from './components/FeatureSection';
+import RentalStepsSection from './components/RentalStepSection';
+import AboutSection from './components/AboutSection';
+
 
 export const metadata: Metadata = {
   title: 'Mioto - Self-drive & Travel Car Rental',

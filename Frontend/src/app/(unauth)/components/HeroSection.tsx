@@ -1,7 +1,7 @@
 // components/heroSection.tsx
 'use client';
 
-import { Car, MapPin, Calendar, Clock, Users } from 'lucide-react';
+import { Car, MapPin, Calendar, Clock} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
