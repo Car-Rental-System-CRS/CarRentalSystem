@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function SignInLayout({
+export default function AboutUsLayout({
   children,
 }: {
   children: Readonly<React.ReactNode>;
