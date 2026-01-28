@@ -70,8 +70,9 @@
 
         
  <dependency>
-    <groupId>com.microsoft.sqlserver</groupId>
-    <artifactId>mssql-jdbc</artifactId>
+     <groupId>com.microsoft.sqlserver</groupId>
+     <artifactId>mssql-jdbc</artifactId>
+     <version>9.4.1.jre11</version>
   </dependency>
 
         <dependency>
