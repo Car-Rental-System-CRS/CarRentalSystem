@@ -1,4 +1,4 @@
-package main.controllers;
+package main.exceptions;
 
 import main.dtos.APIResponse;
 import org.springframework.http.HttpStatus;
@@ -23,4 +23,3 @@ public class GlobalExceptionHandler {
         );
     }
 }
-
