@@ -2,10 +2,10 @@ package main.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import main.dtos.response.CreateOrderResponse;
-import main.entities.Order;
-import main.entities.OrderStatus;
-import main.repositories.OrderRepository;
-import main.services.OrderService;
+import main.entities.Booking;
+import main.entities.PaymentStatus;
+import main.repositories.BookingRepository;
+import main.services.BookingService;
 import main.services.payos.PayosService;
 import org.springframework.stereotype.Service;
 
@@ -14,25 +14,25 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-public class OrderServiceImpl implements OrderService {
+public class BookingServiceImpl implements BookingService {
 
-    private final OrderRepository orderRepository;
+    private final BookingRepository bookingRepository;
     private final PayosService payosService;
 
     @Override
-    public CreateOrderResponse createOrder(Long amount) {
+    public CreateOrderResponse createBooking(Long amount) {
         // 1. Generate PayOS orderCode
         long payosOrderCode = System.currentTimeMillis();
 
         // 2. Create local order
-        Order order = Order.builder()
-                .payosOrderCode(payosOrderCode)
+        Booking booking = Booking.builder()
+                .payosPaymentCode(payosOrderCode)
                 .amount(amount)
-                .status(OrderStatus.CREATED)
+                .status(PaymentStatus.CREATED)
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        orderRepository.save(order);
+        bookingRepository.save(booking);
 
         // 3. Create PayOS payment link
         String checkoutUrl =
@@ -40,19 +40,19 @@ public class OrderServiceImpl implements OrderService {
 
         // 4. Return response
         return new CreateOrderResponse(
-                order.getId(),
-                order.getAmount(),
-                order.getStatus().name(),
+                booking.getId(),
+                booking.getAmount(),
+                booking.getStatus().name(),
                 checkoutUrl
         );
     }
 
     @Override
     public void markPaid(Long orderCode) {
-        Order order = orderRepository.findOrderByPayosOrderCode(orderCode)
+        Booking booking = bookingRepository.findBookingByPayosPaymentCode(orderCode)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        order.setStatus(OrderStatus.PAID);
-        orderRepository.save(order);
+        booking.setStatus(PaymentStatus.PAID);
+        bookingRepository.save(booking);
     }
 }

@@ -1,6 +1,6 @@
 package main.entities;
 
-public enum OrderStatus {
+public enum PaymentStatus {
     CREATED,
     PAID,
     CANCELLED,

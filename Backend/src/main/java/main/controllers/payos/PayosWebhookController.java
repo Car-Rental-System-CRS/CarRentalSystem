@@ -2,9 +2,9 @@ package main.controllers.payos;
 
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.PayosWebhookRequest;
-import main.entities.Order;
-import main.entities.OrderStatus;
-import main.repositories.OrderRepository;
+import main.entities.Booking;
+import main.entities.PaymentStatus;
+import main.repositories.BookingRepository;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class PayosWebhookController {
 
-    private final OrderRepository orderRepository;
+    private final BookingRepository bookingRepository;
 
     @PostMapping("/webhook")
     public String handleWebhook(@RequestBody PayosWebhookRequest request) {
@@ -25,16 +25,16 @@ public class PayosWebhookController {
         Long orderCode = request.getData().getOrderCode();
         String status = request.getData().getStatus();
 
-        Order order = orderRepository.findOrderByPayosOrderCode(orderCode)
+        Booking booking = bookingRepository.findBookingByPayosPaymentCode(orderCode)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         switch (status) {
-            case "PAID" -> order.setStatus(OrderStatus.PAID);
-            case "CANCELLED" -> order.setStatus(OrderStatus.CANCELLED);
-            default -> order.setStatus(OrderStatus.EXPIRED);
+            case "PAID" -> booking.setStatus(PaymentStatus.PAID);
+            case "CANCELLED" -> booking.setStatus(PaymentStatus.CANCELLED);
+            default -> booking.setStatus(PaymentStatus.EXPIRED);
         }
 
-        orderRepository.save(order);
+        bookingRepository.save(booking);
 
         return "OK";
     }
