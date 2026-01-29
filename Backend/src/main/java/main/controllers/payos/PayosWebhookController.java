@@ -26,7 +26,7 @@ public class PayosWebhookController {
         String status = request.getData().getStatus();
 
         Booking booking = bookingRepository.findBookingByPayosPaymentCode(paymentCode)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         switch (status) {
             case "PAID" -> booking.setStatus(PaymentStatus.PAID);

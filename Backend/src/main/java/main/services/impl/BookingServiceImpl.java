@@ -21,12 +21,12 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public CreateBookingResponse createBooking(Long amount) {
-        // 1. Generate PayOS orderCode
-        long payosOrderCode = System.currentTimeMillis();
+        // 1. Generate PayOS paymentCode
+        long payosPaymentCode = System.currentTimeMillis();
 
-        // 2. Create local order
+        // 2. Create local booking
         Booking booking = Booking.builder()
-                .payosPaymentCode(payosOrderCode)
+                .payosPaymentCode(payosPaymentCode)
                 .amount(amount)
                 .status(PaymentStatus.CREATED)
                 .createdAt(LocalDateTime.now())
@@ -36,7 +36,7 @@ public class BookingServiceImpl implements BookingService {
 
         // 3. Create PayOS payment link
         String checkoutUrl =
-                payosService.createPaymentLink(payosOrderCode, amount);
+                payosService.createPaymentLink(payosPaymentCode, amount);
 
         // 4. Return response
         return new CreateBookingResponse(
@@ -48,9 +48,9 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public void markPaid(Long orderCode) {
-        Booking booking = bookingRepository.findBookingByPayosPaymentCode(orderCode)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+    public void markPaid(Long paymentCode) {
+        Booking booking = bookingRepository.findBookingByPayosPaymentCode(paymentCode)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         booking.setStatus(PaymentStatus.PAID);
         bookingRepository.save(booking);

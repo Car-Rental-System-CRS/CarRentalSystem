@@ -16,7 +16,7 @@ public class Booking {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // YOUR order ID
+    private Long id; // YOUR booking ID
 
     @Column(unique = true)
     private Long payosPaymentCode; // sent to PayOS

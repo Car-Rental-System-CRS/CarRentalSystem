@@ -15,7 +15,7 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
-    public CreateBookingResponse createOrder(
+    public CreateBookingResponse createBooking(
             @RequestBody CreateBookingRequest request
     ) {
         return bookingService.createBooking(request.getAmount());
