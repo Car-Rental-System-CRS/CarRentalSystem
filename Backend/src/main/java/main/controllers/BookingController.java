@@ -8,7 +8,7 @@ import main.services.BookingService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/booking")
 @RequiredArgsConstructor
 public class BookingController {
 

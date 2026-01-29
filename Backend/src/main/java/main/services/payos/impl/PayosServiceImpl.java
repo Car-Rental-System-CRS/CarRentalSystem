@@ -15,12 +15,12 @@ public class PayosServiceImpl implements PayosService {
     private final PayOS payOS;
 
     @Override
-    public String createPaymentLink(long payosOrderCode, long amount) {
+    public String createPaymentLink(long payosPaymentCode, long amount) {
 
         try {
             CreatePaymentLinkRequest request =
                     CreatePaymentLinkRequest.builder()
-                            .orderCode(payosOrderCode) // VERY IMPORTANT
+                            .orderCode(payosPaymentCode) // VERY IMPORTANT
                             .amount(amount)
                             .description("Car rental payment")
                             .returnUrl("http://localhost:8080/payment/success")

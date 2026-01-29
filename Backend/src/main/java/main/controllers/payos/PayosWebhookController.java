@@ -22,10 +22,10 @@ public class PayosWebhookController {
             return "IGNORED";
         }
 
-        Long orderCode = request.getData().getOrderCode();
+        Long paymentCode = request.getData().getPaymentCode();
         String status = request.getData().getStatus();
 
-        Booking booking = bookingRepository.findBookingByPayosPaymentCode(orderCode)
+        Booking booking = bookingRepository.findBookingByPayosPaymentCode(paymentCode)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         switch (status) {

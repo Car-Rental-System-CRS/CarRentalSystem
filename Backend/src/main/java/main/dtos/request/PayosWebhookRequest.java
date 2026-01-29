@@ -11,7 +11,7 @@ public class PayosWebhookRequest {
 
     @Data
     public static class PayosWebhookData {
-        private Long orderCode;     // PayOS orderCode
+        private Long paymentCode;     // PayOS paymentCode
         private String status;      // PAID / CANCELLED / FAILED
         private Long amount;
     }
