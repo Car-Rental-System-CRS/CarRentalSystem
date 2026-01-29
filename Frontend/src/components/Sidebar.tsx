@@ -12,7 +12,7 @@ export default function Sidebar() {
   const navItems = [
     {
       name: 'Dashboard',
-      href: '/staff',
+      href: '/staff/dashboard',
       icon: LayoutDashboard,
     },
     {
@@ -22,12 +22,12 @@ export default function Sidebar() {
     },
     {
       name: 'Users',
-      href: '/staff/users',
+      href: '/staff/user',
       icon: Users,
     },
     {
       name: 'Settings',
-      href: '/staff/settings',
+      href: '/staff/setting',
       icon: Settings,
     },
   ];
