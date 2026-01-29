@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class CreateOrderResponse {
+public class CreateBookingResponse {
     private Long orderId;
     private Long amount;
     private String status;

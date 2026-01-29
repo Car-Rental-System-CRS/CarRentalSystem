@@ -1,7 +1,7 @@
 package main.services.impl;
 
 import lombok.RequiredArgsConstructor;
-import main.dtos.response.CreateOrderResponse;
+import main.dtos.response.CreateBookingResponse;
 import main.entities.Booking;
 import main.entities.PaymentStatus;
 import main.repositories.BookingRepository;
@@ -20,7 +20,7 @@ public class BookingServiceImpl implements BookingService {
     private final PayosService payosService;
 
     @Override
-    public CreateOrderResponse createBooking(Long amount) {
+    public CreateBookingResponse createBooking(Long amount) {
         // 1. Generate PayOS orderCode
         long payosOrderCode = System.currentTimeMillis();
 
@@ -39,7 +39,7 @@ public class BookingServiceImpl implements BookingService {
                 payosService.createPaymentLink(payosOrderCode, amount);
 
         // 4. Return response
-        return new CreateOrderResponse(
+        return new CreateBookingResponse(
                 booking.getId(),
                 booking.getAmount(),
                 booking.getStatus().name(),

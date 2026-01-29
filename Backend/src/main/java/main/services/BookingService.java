@@ -1,8 +1,8 @@
 package main.services;
 
-import main.dtos.response.CreateOrderResponse;
+import main.dtos.response.CreateBookingResponse;
 
 public interface BookingService {
-    CreateOrderResponse createBooking(Long amount);
+    CreateBookingResponse createBooking(Long amount);
     void markPaid(Long orderCode);
 }

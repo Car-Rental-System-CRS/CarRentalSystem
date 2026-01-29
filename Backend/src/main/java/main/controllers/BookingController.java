@@ -2,8 +2,8 @@ package main.controllers;
 
 
 import lombok.RequiredArgsConstructor;
-import main.dtos.request.CreateOrderRequest;
-import main.dtos.response.CreateOrderResponse;
+import main.dtos.request.CreateBookingRequest;
+import main.dtos.response.CreateBookingResponse;
 import main.services.BookingService;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +15,8 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
-    public CreateOrderResponse createOrder(
-            @RequestBody CreateOrderRequest request
+    public CreateBookingResponse createOrder(
+            @RequestBody CreateBookingRequest request
     ) {
         return bookingService.createBooking(request.getAmount());
     }
