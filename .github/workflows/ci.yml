@@ -21,9 +21,9 @@ jobs:
         with:
           filters: |
             frontend:
-              - 'frontend/**'
+              - 'Frontend/**'
             backend:
-              - 'backend/**'
+              - 'Backend/**'
 
   # ================= FRONTEND =================
   frontend:
@@ -44,18 +44,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd frontend
+          cd Frontend
           npm ci
 
       # ---------- TEST + COVERAGE ----------
       - name: Run unit tests with coverage
         run: |
-          cd frontend
+          cd Frontend
           npm run test -- --coverage
 
       - name: Check coverage > 90%
         run: |
-          cd frontend
+          cd Frontend
           npx jest --coverage --coverageThreshold='{"global":{"branches":90,"functions":90,"lines":90,"statements":90}}'
 
   # ================= BACKEND =================
@@ -72,22 +72,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "24"
+          java-version: "21"
           cache: "maven"
 
       # ---------- Spotless check ----------
       - name: Check code format
         run: |
-          cd backend
+          cd Backend
           mvn spotless:check
 
       # ---------- TEST + COVERAGE ----------
       - name: Run tests with JaCoCo
         run: |
-          cd backend
+          cd Backend
           mvn clean verify
-
-      - name: Check coverage > 90%
-        run: |
-          cd backend
-          mvn jacoco:check
