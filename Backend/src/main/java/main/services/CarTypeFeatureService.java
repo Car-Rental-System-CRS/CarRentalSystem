@@ -6,6 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface CarTypeFeatureService {
-    List<CarFeature> getFeaturesByCarTypeId(UUID typeId);
-    void replaceFeaturesForCarType(UUID typeId, List<UUID> featureId);
+    /*List<CarFeature> getFeaturesByCarTypeId(UUID typeId);
+    void replaceFeaturesForCarType(UUID typeId, List<UUID> featureId);*/
 }

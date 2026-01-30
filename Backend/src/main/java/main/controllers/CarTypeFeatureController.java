@@ -16,7 +16,7 @@ import java.util.UUID;
 @RequestMapping("/api/car-types")
 @RequiredArgsConstructor
 public class CarTypeFeatureController {
-
+    /*
     private final CarTypeFeatureService carTypeFeatureService;
 
     @GetMapping("/{typeId}/features")
@@ -46,4 +46,5 @@ public class CarTypeFeatureController {
                         .build()
         );
     }
+    */
 }

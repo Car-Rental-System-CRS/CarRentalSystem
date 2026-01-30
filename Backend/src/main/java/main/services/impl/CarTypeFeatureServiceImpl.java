@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CarTypeFeatureServiceImpl implements CarTypeFeatureService {
-
+/*
     private final ModelFeatureRepository modelFeatureRepository;
     private final CarFeatureRepository carFeatureRepository;
     private final CarTypeRepository carTypeRepository;
@@ -59,5 +59,5 @@ public class CarTypeFeatureServiceImpl implements CarTypeFeatureService {
         if (!mappings.isEmpty()) {
             modelFeatureRepository.saveAll(mappings);
         }
-    }
+    }*/
 }

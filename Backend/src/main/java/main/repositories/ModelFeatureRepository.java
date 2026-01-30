@@ -10,6 +10,7 @@ import java.util.UUID;
 
 @Repository
 public interface ModelFeatureRepository extends JpaRepository<ModelFeature, ModelFeatureId> {
+    /*
     List<ModelFeature> findByCarTypeIds(UUID carTypeId);
-    void deleteByCarTypeId(UUID carTypeId);
+    void deleteByCarTypeId(UUID carTypeId);*/
 }
