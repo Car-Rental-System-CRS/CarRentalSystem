@@ -11,11 +11,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class CarTypeResponse {
-    private UUID typeId;
+    private UUID id;
     private int numberOfSeats;
     private String carName;
     // kWh per km
     private double consumptionKwhPerKm;
     private BigDecimal price;
+
     private CarBrandResponse carBrand;
 }

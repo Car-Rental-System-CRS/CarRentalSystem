@@ -12,7 +12,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,22 +19,23 @@ import java.util.UUID;
 public class CarBrandServiceImpl implements CarBrandService {
 
     private final CarBrandRepository carBrandRepository;
-    private final CarBrandMapper carBrandMapper;
 
     @Override
     public CarBrandResponse createBrand(CreateCarBrandRequest request) {
-        CarBrand entity = carBrandMapper.toEntity(request);
+
+        CarBrand entity = CarBrandMapper.toEntity(request);
 
         CarBrand saved = carBrandRepository.save(entity);
-        return carBrandMapper.toResponse(saved);
+
+        return CarBrandMapper.toResponse(saved);
     }
 
     @Override
-    public CarBrandResponse getBrandById(UUID brandId) {
-        CarBrand entity = carBrandRepository.findById(brandId)
-                .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + brandId));
+    public CarBrandResponse getBrandById(UUID id) {
+        CarBrand entity = carBrandRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + id));
 
-        return carBrandMapper.toResponse(entity);
+        return CarBrandMapper.toResponse(entity);
     }
 
     @Override
@@ -45,26 +45,26 @@ public class CarBrandServiceImpl implements CarBrandService {
     ) {
         return carBrandRepository
                 .findAll(specification, pageable)
-                .map(carBrandMapper::toResponse);
+                .map(CarBrandMapper::toResponse);
     }
 
     @Override
-    public CarBrandResponse updateBrand(UUID brandId, CreateCarBrandRequest request) {
-        CarBrand entity = carBrandRepository.findById(brandId)
-                .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + brandId));
+    public CarBrandResponse updateBrand(UUID id, CreateCarBrandRequest request) {
+        CarBrand entity = carBrandRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + id));
 
-        entity.setName(request.getBrandName());
+        entity.setName(request.getName());
 
         CarBrand saved = carBrandRepository.save(entity);
-        return carBrandMapper.toResponse(saved);
+        return CarBrandMapper.toResponse(saved);
     }
 
     @Override
-    public void deleteBrand(UUID brandId) {
-        if (!carBrandRepository.existsById(brandId)) {
-            throw new IllegalArgumentException("Car brand not found: " + brandId);
+    public void deleteBrand(UUID id) {
+        if (!carBrandRepository.existsById(id)) {
+            throw new IllegalArgumentException("Car brand not found: " + id);
         }
-        carBrandRepository.deleteById(brandId);
+        carBrandRepository.deleteById(id);
     }
 
 }

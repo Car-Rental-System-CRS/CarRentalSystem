@@ -8,6 +8,6 @@ import lombok.*;
 @Getter
 @Builder
 public class CreateCarFeatureRequest {
-    private String featureName;
-    private String featureDescription;
+    private String name;
+    private String description;
 }

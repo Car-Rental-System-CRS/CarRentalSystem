@@ -13,13 +13,20 @@ public class CarBrandMapper {
 
     private final ModelMapper modelMapper;
 
-    public CarBrand toEntity(CreateCarBrandRequest request) {
-        CarBrand entity = new CarBrand();
-        entity.setName(request.getBrandName());
-        return entity;
+    public static CarBrand toEntity(CreateCarBrandRequest request) {
+        if (request == null) return null;
+
+        return CarBrand.builder()
+                .name(request.getName())
+                .build();
     }
 
-    public CarBrandResponse toResponse(CarBrand entity) {
-        return modelMapper.map(entity, CarBrandResponse.class);
+    public static CarBrandResponse toResponse(CarBrand entity) {
+        if (entity == null) return null;
+
+        return CarBrandResponse.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .build();
     }
 }

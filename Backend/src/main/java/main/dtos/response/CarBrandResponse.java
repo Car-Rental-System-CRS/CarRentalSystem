@@ -10,6 +10,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class CarBrandResponse {
-    private UUID brandId;
-    private String brandName;
+    private UUID id;
+    private String name;
 }

@@ -10,7 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class CarFeatureResponse {
-    private UUID featureId;
-    private String featureName;
-    private String featureDescription;
+    private UUID id;
+    private String name;
+    private String description;
 }

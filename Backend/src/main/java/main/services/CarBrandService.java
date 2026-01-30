@@ -12,14 +12,14 @@ import java.util.UUID;
 public interface CarBrandService {
     CarBrandResponse createBrand(CreateCarBrandRequest request);
 
-    CarBrandResponse getBrandById(UUID brandId);
+    CarBrandResponse getBrandById(UUID id);
 
     Page<CarBrandResponse> getAllBrands(
             Pageable pageable,
             Specification<CarBrand> specification
     );
 
-    CarBrandResponse updateBrand(UUID brandId, CreateCarBrandRequest request);
+    CarBrandResponse updateBrand(UUID id, CreateCarBrandRequest request);
 
-    void deleteBrand(UUID brandId);
+    void deleteBrand(UUID id);
 }

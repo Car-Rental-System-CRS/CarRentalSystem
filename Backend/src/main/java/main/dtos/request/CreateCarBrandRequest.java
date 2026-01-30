@@ -8,5 +8,5 @@ import lombok.*;
 @Getter
 @Builder
 public class CreateCarBrandRequest {
-    private String brandName;
+    private String name;
 }

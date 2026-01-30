@@ -40,9 +40,9 @@ public class CarBrandController {
         );
     }
 
-    @GetMapping("/{brandId}")
-    public ResponseEntity<APIResponse<CarBrandResponse>> getById(@PathVariable UUID brandId) {
-        CarBrandResponse data = carBrandService.getBrandById(brandId);
+    @GetMapping("/{id}")
+    public ResponseEntity<APIResponse<CarBrandResponse>> getById(@PathVariable UUID id) {
+        CarBrandResponse data = carBrandService.getBrandById(id);
         return ResponseEntity.ok(
                 APIResponse.<CarBrandResponse>builder()
                         .success(true)
@@ -82,11 +82,11 @@ public class CarBrandController {
     }
 
 
-    @PutMapping("/{brandId}")
+    @PutMapping("/{id}")
     public ResponseEntity<APIResponse<CarBrandResponse>> update(
-            @PathVariable UUID brandId,
+            @PathVariable UUID id,
             @RequestBody CreateCarBrandRequest request) {
-        CarBrandResponse data = carBrandService.updateBrand(brandId, request);
+        CarBrandResponse data = carBrandService.updateBrand(id, request);
         return ResponseEntity.ok(
                 APIResponse.<CarBrandResponse>builder()
                         .success(true)
@@ -97,9 +97,9 @@ public class CarBrandController {
         );
     }
 
-    @DeleteMapping("/{brandId}")
-    public ResponseEntity<APIResponse<Void>> delete(@PathVariable UUID brandId) {
-        carBrandService.deleteBrand(brandId);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponse<Void>> delete(@PathVariable UUID id) {
+        carBrandService.deleteBrand(id);
         return ResponseEntity.ok(
                 APIResponse.<Void>builder()
                         .success(true)

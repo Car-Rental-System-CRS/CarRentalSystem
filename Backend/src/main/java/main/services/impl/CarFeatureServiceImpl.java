@@ -4,12 +4,14 @@ import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateCarFeatureRequest;
 import main.dtos.response.CarFeatureResponse;
 import main.entities.CarFeature;
+import main.mappers.CarFeatureMapper;
 import main.repositories.CarFeatureRepository;
 import main.services.CarFeatureService;
-import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -17,50 +19,51 @@ import java.util.UUID;
 public class CarFeatureServiceImpl implements CarFeatureService {
 
     private final CarFeatureRepository carFeatureRepository;
-    private final ModelMapper modelMapper;
+    private final CarFeatureMapper carFeatureMapper;
+
 
     @Override
-    public CarFeatureResponse create(CreateCarFeatureRequest request) {
-        CarFeature entity = CarFeature.builder()
-                .name(request.getFeatureName())
-                .description(request.getFeatureDescription())
-                .build();
-        CarFeature saved = carFeatureRepository.save(entity);
-        return modelMapper.map(saved, CarFeatureResponse.class);
-    }
-
-    @Override
-    public CarFeatureResponse getById(UUID featureId) {
-        CarFeature entity = carFeatureRepository.findById(featureId)
-                .orElseThrow(() -> new IllegalArgumentException("Car feature not found: " + featureId));
-
-        return modelMapper.map(entity, CarFeatureResponse.class);
-    }
-
-    @Override
-    public List<CarFeatureResponse> getAll() {
-        return carFeatureRepository.findAll().stream()
-                .map(e -> modelMapper.map(e, CarFeatureResponse.class))
-                .toList();
-    }
-
-    @Override
-    public CarFeatureResponse update(UUID featureId, CreateCarFeatureRequest request) {
-        CarFeature entity = carFeatureRepository.findById(featureId)
-                .orElseThrow(() -> new IllegalArgumentException("CarFeature not found: " + featureId));
-
-        entity.setName(request.getFeatureName());
-        entity.setDescription(request.getFeatureDescription());
+    public CarFeatureResponse createFeature(CreateCarFeatureRequest request) {
+        CarFeature entity = carFeatureMapper.toEntity(request);
 
         CarFeature saved = carFeatureRepository.save(entity);
-        return modelMapper.map(saved, CarFeatureResponse.class);
+        return carFeatureMapper.toResponse(saved);
     }
 
     @Override
-    public void delete(UUID featureId) {
-        if (!carFeatureRepository.existsById(featureId)) {
-            throw new IllegalArgumentException("CarFeature not found: " + featureId);
+    public CarFeatureResponse getFeatureById(UUID id) {
+        CarFeature entity = carFeatureRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Car feature not found: " + id));
+
+        return carFeatureMapper.toResponse(entity);
+    }
+
+    @Override
+    public Page<CarFeatureResponse> getAllFeatures(
+            Pageable pageable,
+            Specification<CarFeature> specification
+    ) {
+        return carFeatureRepository
+                .findAll(specification, pageable)
+                .map(carFeatureMapper::toResponse);
+    }
+
+    @Override
+    public CarFeatureResponse updateFeature(UUID id, CreateCarFeatureRequest request) {
+        CarFeature entity = carFeatureRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Car feature not found: " + id));
+
+        entity.setName(request.getName());
+
+        CarFeature saved = carFeatureRepository.save(entity);
+        return carFeatureMapper.toResponse(saved);
+    }
+
+    @Override
+    public void deleteFeature(UUID id) {
+        if (!carFeatureRepository.existsById(id)) {
+            throw new IllegalArgumentException("Car feature not found: " + id);
         }
-        carFeatureRepository.deleteById(featureId);
+        carFeatureRepository.deleteById(id);
     }
 }
