@@ -22,8 +22,8 @@ public class CarFeatureServiceImpl implements CarFeatureService {
     @Override
     public CarFeatureResponse create(CreateCarFeatureRequest request) {
         CarFeature entity = CarFeature.builder()
-                .featureName(request.getFeatureName())
-                .featureDescription(request.getFeatureDescription())
+                .name(request.getFeatureName())
+                .description(request.getFeatureDescription())
                 .build();
         CarFeature saved = carFeatureRepository.save(entity);
         return modelMapper.map(saved, CarFeatureResponse.class);
@@ -49,8 +49,8 @@ public class CarFeatureServiceImpl implements CarFeatureService {
         CarFeature entity = carFeatureRepository.findById(featureId)
                 .orElseThrow(() -> new IllegalArgumentException("CarFeature not found: " + featureId));
 
-        entity.setFeatureName(request.getFeatureName());
-        entity.setFeatureDescription(request.getFeatureDescription());
+        entity.setName(request.getFeatureName());
+        entity.setDescription(request.getFeatureDescription());
 
         CarFeature saved = carFeatureRepository.save(entity);
         return modelMapper.map(saved, CarFeatureResponse.class);

@@ -12,11 +12,11 @@ import java.util.UUID;
 @Setter
 @Getter
 @Builder
-public class CarType {
+public class CarType extends AuditableEntity{
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID typeId;
+    @GeneratedValue
+    private UUID id;
 
     @Column(nullable = false)
     private int numberOfSeats;

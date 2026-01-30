@@ -2,18 +2,24 @@ package main.services;
 
 import main.dtos.request.CreateCarBrandRequest;
 import main.dtos.response.CarBrandResponse;
+import main.entities.CarBrand;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface CarBrandService {
-    CarBrandResponse create(CreateCarBrandRequest request);
+    CarBrandResponse createBrand(CreateCarBrandRequest request);
 
-    CarBrandResponse getById(UUID brandId);
+    CarBrandResponse getBrandById(UUID brandId);
 
-    List<CarBrandResponse> getAll();
+    Page<CarBrandResponse> getAllBrands(
+            Pageable pageable,
+            Specification<CarBrand> specification
+    );
 
-    CarBrandResponse update(UUID brandId, CreateCarBrandRequest request);
+    CarBrandResponse updateBrand(UUID brandId, CreateCarBrandRequest request);
 
-    void delete(UUID brandId);
+    void deleteBrand(UUID brandId);
 }

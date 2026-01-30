@@ -2,7 +2,7 @@ package main.dtos.request;
 
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -12,6 +12,6 @@ import java.util.UUID;
 @Builder
 public class CreateCarRequest {
     private String licensePlate;
-    private LocalDateTime importDate;
+    private LocalDate importDate;
     private UUID typeId;
 }

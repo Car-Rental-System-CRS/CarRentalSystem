@@ -11,16 +11,15 @@ import java.util.UUID;
 @Setter
 @Getter
 @Builder
-public class CarFeature {
+public class CarFeature extends AuditableEntity{
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false)
-    private UUID featureId;
+    @GeneratedValue
+    private UUID id;
 
     @Column(nullable = false)
-    private String featureName;
+    private String name;
 
     @Column(nullable = false)
-    private String featureDescription;
+    private String description;
 }

@@ -3,7 +3,7 @@ package main.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -12,15 +12,15 @@ import java.util.UUID;
 @Setter
 @Getter
 @Builder
-public class Car {
+public class Car extends AuditableEntity{
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID carId;
+    @GeneratedValue
+    private UUID id;
 
     private String licensePlate;
 
-    private LocalDateTime importDate;
+    private LocalDate importDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "type_id", nullable = false)
