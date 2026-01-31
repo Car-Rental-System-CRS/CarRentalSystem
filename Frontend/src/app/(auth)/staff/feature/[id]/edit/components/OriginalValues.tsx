@@ -1,10 +1,9 @@
 export default function OriginalValues({
-  unit,
+  feature,
 }: {
-  unit: {
-    license: string;
-    importDate: string;
-    gpsId?: string;
+  feature: {
+    name: string;
+    description?: string;
   };
 }) {
   return (
@@ -12,8 +11,8 @@ export default function OriginalValues({
       <h3 className="font-semibold mb-3">Original Values</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <Value label="License Plate" value={unit.license} />
-        <Value label="Import Date" value={unit.importDate} />
+        <Value label="Name" value={feature.name} />
+        <Value label="Description" value={feature.description || '—'} />
       </div>
     </div>
   );

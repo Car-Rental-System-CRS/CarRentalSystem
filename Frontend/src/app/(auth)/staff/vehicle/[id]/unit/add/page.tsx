@@ -20,7 +20,6 @@ export default function AddUnitPage({
   const [form, setForm] = useState<AddUnitFormState>({
     license: '',
     importDate: new Date().toISOString().split('T')[0]!,
-    gpsId: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

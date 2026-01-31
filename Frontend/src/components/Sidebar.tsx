@@ -21,6 +21,16 @@ export default function Sidebar() {
       icon: Car,
     },
     {
+      name: 'Feature Management',
+      href: '/staff/feature',
+      icon: Car,
+    },
+    {
+      name: 'Brand Management',
+      href: '/staff/brand',
+      icon: Car,
+    },
+    {
       name: 'Users',
       href: '/staff/user',
       icon: Users,
