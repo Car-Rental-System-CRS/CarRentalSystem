@@ -1,20 +1,20 @@
 package main.mappers;
 
-import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarTypeResponse;
 import main.entities.CarBrand;
 import main.entities.CarType;
-import org.springframework.stereotype.Component;
 
-@Component
-@RequiredArgsConstructor
 public class CarTypeMapper {
 
+    private CarTypeMapper() {}
+
     public static CarType toEntity(CreateCarTypeRequest request, CarBrand brand) {
+        if (request == null) return null;
+
         return CarType.builder()
                 .numberOfSeats(request.getNumberOfSeats())
-                .carName(request.getCarName())
+                .name(request.getName())
                 .consumptionKwhPerKm(request.getConsumptionKwhPerKm())
                 .price(request.getPrice())
                 .carBrand(brand)
@@ -22,10 +22,12 @@ public class CarTypeMapper {
     }
 
     public static CarTypeResponse toResponse(CarType entity) {
+        if (entity == null) return null;
+
         return CarTypeResponse.builder()
                 .id(entity.getId())
                 .numberOfSeats(entity.getNumberOfSeats())
-                .carName(entity.getCarName())
+                .name(entity.getName())
                 .consumptionKwhPerKm(entity.getConsumptionKwhPerKm())
                 .price(entity.getPrice())
                 .carBrand(CarBrandMapper.toResponse(entity.getCarBrand()))

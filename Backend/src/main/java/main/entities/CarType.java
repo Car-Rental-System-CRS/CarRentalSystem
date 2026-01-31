@@ -19,10 +19,10 @@ public class CarType extends AuditableEntity{
     private UUID id;
 
     @Column(nullable = false)
-    private int numberOfSeats;
+    private String name;
 
     @Column(nullable = false)
-    private String carName;
+    private int numberOfSeats;
 
     // kWh per km
     @Column(nullable = false)

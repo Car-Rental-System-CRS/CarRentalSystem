@@ -11,8 +11,9 @@ import java.util.UUID;
 @Getter
 @Builder
 public class CreateCarTypeRequest {
+
+    private String name;
     private int numberOfSeats;
-    private String carName;
     // kWh per km
     private double consumptionKwhPerKm;
     private BigDecimal price;

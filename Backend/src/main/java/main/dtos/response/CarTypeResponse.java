@@ -12,8 +12,8 @@ import java.util.UUID;
 @Builder
 public class CarTypeResponse {
     private UUID id;
+    private String name;
     private int numberOfSeats;
-    private String carName;
     // kWh per km
     private double consumptionKwhPerKm;
     private BigDecimal price;

@@ -2,18 +2,25 @@ package main.services;
 
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarTypeResponse;
+import main.entities.CarType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface CarTypeService {
-    CarTypeResponse create(CreateCarTypeRequest request);
+    CarTypeResponse createType(CreateCarTypeRequest request);
 
-    CarTypeResponse getById(UUID typeId);
+    CarTypeResponse getTypeById(UUID id);
 
-    List<CarTypeResponse> getAll();
+    Page<CarTypeResponse> getAllTypes(
+            Pageable pageable,
+            Specification<CarType> specification
+    );
 
-    CarTypeResponse update(UUID typeId, CreateCarTypeRequest request);
+    CarTypeResponse updateType(UUID id, CreateCarTypeRequest request);
 
-    void delete(UUID typeId);
+    void deleteType(UUID id);
 }

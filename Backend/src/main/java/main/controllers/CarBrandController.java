@@ -56,14 +56,11 @@ public class CarBrandController {
     @GetMapping
     public ResponseEntity<APIResponse<PageResponse<CarBrandResponse>>> getAll(
             @RequestParam(required = false) String name,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            Pageable pageable
     ) {
 
-        Pageable pageable = PageRequest.of(page, size);
-
         Specification<CarBrand> specification =
-                Specification.where(CarBrandSpecification.hasName(name));
+                Specification.where(CarBrandSpecification.getBrandNameSpecification(name));
 
         Page<CarBrandResponse> result =
                 carBrandService.getAllBrands(pageable, specification);

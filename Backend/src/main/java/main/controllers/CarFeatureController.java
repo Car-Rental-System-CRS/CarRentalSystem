@@ -59,14 +59,13 @@ public class CarFeatureController {
     @GetMapping
     public ResponseEntity<APIResponse<PageResponse<CarFeatureResponse>>> getAll(
             @RequestParam(required = false) String name,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(required = false) String description,
+            Pageable pageable
     ) {
 
-        Pageable pageable = PageRequest.of(page, size);
-
         Specification<CarFeature> specification =
-                Specification.where(CarFeatureSpecification.hasName(name));
+                Specification.where(CarFeatureSpecification.getFeatureNameSpecification(name))
+                        .and(CarFeatureSpecification.getFeatureDescriptionSpecification(description));
 
         Page<CarFeatureResponse> result =
                 carFeatureService.getAllFeatures(pageable, specification);
