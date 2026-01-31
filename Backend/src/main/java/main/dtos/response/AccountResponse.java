@@ -2,12 +2,13 @@ package main.dtos.response;
 
 import lombok.*;
 
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
+import java.util.UUID;
+
+@Getter @Setter
+@AllArgsConstructor @NoArgsConstructor
 @Builder
 public class AccountResponse {
+    private UUID id;
     private String name;
     private String email;
 }

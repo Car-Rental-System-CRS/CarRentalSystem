@@ -1,16 +1,17 @@
 package main.mappers;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import main.dtos.response.AccountResponse;
+import main.entities.Account;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AccountMapper {
-    private final ModelMapper mapper;
+    private final ModelMapper modelMapper;
 
-    public AccountResponse toUserResponseDto(AccountMapper account) {
-        return mapper.map(account, AccountResponse.class);
+    public AccountResponse toResponse(Account e) {
+        return modelMapper.map(e, AccountResponse.class);
     }
 }
