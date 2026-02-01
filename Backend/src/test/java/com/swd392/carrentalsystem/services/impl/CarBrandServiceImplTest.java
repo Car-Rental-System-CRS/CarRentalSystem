@@ -8,6 +8,7 @@ import main.repositories.CarBrandRepository;
 import main.services.impl.CarBrandServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -87,16 +88,28 @@ class CarBrandServiceImplTest {
 
         Pageable pageable = PageRequest.of(0, 5);
 
-        Page<CarBrand> page = new PageImpl<>(List.of(new CarBrand()));
+        CarBrand entity = new CarBrand();
+        CarBrandResponse response = new CarBrandResponse();
 
-        when(carBrandRepository.findAll(any(Specification.class), eq(pageable)))
-                .thenReturn(page);
+        Page<CarBrand> page = new PageImpl<>(List.of(entity));
 
-        Page<CarBrandResponse> result =
-                carBrandService.getAllBrands(pageable, null);
+        when(carBrandRepository.findAll(
+                ArgumentMatchers.<Specification<CarBrand>>any(),
+                any(Pageable.class)
+        )).thenReturn(page);
 
-        assertNotNull(result);
+        try (MockedStatic<CarBrandMapper> mapper = mockStatic(CarBrandMapper.class)) {
+
+            mapper.when(() -> CarBrandMapper.toResponse(entity))
+                    .thenReturn(response);
+
+            Page<CarBrandResponse> result =
+                    carBrandService.getAllBrands(pageable, null);
+
+            assertEquals(1, result.getTotalElements());
+        }
     }
+
 
     // ===== UPDATE =====
     @Test
