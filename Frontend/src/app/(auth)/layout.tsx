@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import Header from '@/components/Header';
->>>>>>> feature/SCRUM-30-vehicle-management/develop
 import { auth } from '@/lib/auth';
 import { Metadata } from 'next';
 import Link from 'next/link';
