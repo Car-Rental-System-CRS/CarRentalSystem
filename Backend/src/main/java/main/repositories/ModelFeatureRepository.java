@@ -1,26 +1,27 @@
 package main.repositories;
 
 import main.entities.ModelFeature;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface ModelFeatureRepository extends JpaRepository<ModelFeature, UUID> {
 
-    List<ModelFeature> findByCarTypeId(UUID carTypeId); //Find all features for one type
+    Page<ModelFeature> findByCarTypeId(UUID typeId, Pageable pageable); //Find all features for one type
 
-    List<ModelFeature> findByCarFeatureId(UUID carFeatureId); //Find all types with one feature
+    Page<ModelFeature> findByCarFeatureId(UUID featureId, Pageable pageable); //Find all types with one feature
 
-    boolean existsByCarTypeIdAndCarFeatureId(UUID carTypeId, UUID carFeatureId); //Prevent duplicate mapping
+    boolean existsByCarTypeIdAndCarFeatureId(UUID typeId, UUID featureId); //Prevent duplicate mapping
 
-    Optional<ModelFeature> findByCarTypeIdAndCarFeatureId(UUID carTypeId, UUID carFeatureId); //Find one mapping
+    Optional<ModelFeature> findByCarTypeIdAndCarFeatureId(UUID typeId, UUID featureId); //Find one mapping
 
-    void deleteByCarTypeId(UUID carTypeId); //Bulk delete mappings
+    void deleteByCarTypeId(UUID typeId); //Bulk delete mappings
 
-    void deleteByCarTypeIdAndCarFeatureId(UUID carTypeId, UUID carFeatureId); //Remove one feature from one type
+    void deleteByCarTypeIdAndCarFeatureId(UUID typeId, UUID featureId); //Remove one feature from one type
 
 }
