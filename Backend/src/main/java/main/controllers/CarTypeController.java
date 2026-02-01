@@ -3,16 +3,12 @@ package main.controllers;
 import lombok.RequiredArgsConstructor;
 import main.dtos.APIResponse;
 import main.dtos.request.CreateCarTypeRequest;
-import main.dtos.response.CarFeatureResponse;
 import main.dtos.response.CarTypeResponse;
 import main.dtos.response.PageResponse;
-import main.entities.CarFeature;
 import main.entities.CarType;
 import main.services.CarTypeService;
-import main.specification.CarFeatureSpecification;
 import main.specification.CarTypeSpecification;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -21,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -61,7 +56,7 @@ public class CarTypeController {
     public ResponseEntity<APIResponse<PageResponse<CarTypeResponse>>> getAll(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer numberOfSeats,
-            @RequestParam(required = false) double consumptionKwhPerKm,
+            @RequestParam(required = false) Double consumptionKwhPerKm,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             Pageable pageable
@@ -105,7 +100,7 @@ public class CarTypeController {
         );
     }
 
-    @DeleteMapping("/{typeId}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<APIResponse<Void>> delete(@PathVariable UUID id) {
         carTypeService.deleteType(id);
         return ResponseEntity.ok(

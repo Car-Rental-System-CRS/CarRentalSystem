@@ -13,6 +13,7 @@ import main.services.ModelFeatureService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -43,14 +44,15 @@ public class ModelFeatureServiceImpl implements ModelFeatureService {
     }
 
     // ===== REMOVE =====
+    @Transactional
     @Override
     public void removeFeatureFromType(UUID typeId, UUID featureId) {
 
-        if (!modelFeatureRepository.existsByCarTypeIdAndCarFeatureId(typeId, featureId)) {
-            throw new IllegalArgumentException("Mapping does not exist");
-        }
+        ModelFeature mapping = modelFeatureRepository
+                .findByCarTypeIdAndCarFeatureId(typeId, featureId)
+                .orElseThrow(() -> new IllegalArgumentException("Mapping does not exist"));
 
-        modelFeatureRepository.deleteByCarTypeIdAndCarFeatureId(typeId, featureId);
+        modelFeatureRepository.delete(mapping);
     }
 
     // ===== PAGE FEATURES OF TYPE =====

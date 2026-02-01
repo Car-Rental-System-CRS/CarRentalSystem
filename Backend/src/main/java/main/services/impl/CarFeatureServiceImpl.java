@@ -54,6 +54,7 @@ public class CarFeatureServiceImpl implements CarFeatureService {
                 .orElseThrow(() -> new IllegalArgumentException("Car feature not found: " + id));
 
         entity.setName(request.getName());
+        entity.setDescription((request.getDescription()));
 
         CarFeature saved = carFeatureRepository.save(entity);
         return carFeatureMapper.toResponse(saved);

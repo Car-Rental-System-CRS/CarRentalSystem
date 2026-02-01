@@ -14,12 +14,15 @@ public class CarFeatureMapper {
     private final ModelMapper modelMapper;
 
     public CarFeature toEntity(CreateCarFeatureRequest request) {
-        CarFeature entity = new CarFeature();
-        entity.setName(request.getName());
-        return entity;
+        return CarFeature.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .build();
     }
 
+
     public CarFeatureResponse toResponse(CarFeature entity) {
+        if (entity == null) return null;
         return modelMapper.map(entity, CarFeatureResponse.class);
     }
 }
