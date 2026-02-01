@@ -2,6 +2,10 @@
 'use client';
 
 import { useState } from 'react';
+// components/header.tsx
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Car, Menu, X } from 'lucide-react';
@@ -9,6 +13,9 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 export default function Header() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
