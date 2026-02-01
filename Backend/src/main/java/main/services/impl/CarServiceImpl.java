@@ -75,7 +75,6 @@ public class CarServiceImpl implements CarService {
 
         entity.setLicensePlate(request.getLicensePlate());
         entity.setImportDate(request.getImportDate());
-        entity.setCarType(type);
 
         Car saved = carRepository.save(entity);
 

@@ -74,7 +74,6 @@ public class CarTypeServiceImpl implements CarTypeService {
         entity.setName(request.getName());
         entity.setConsumptionKwhPerKm(request.getConsumptionKwhPerKm());
         entity.setPrice(request.getPrice());
-        entity.setCarBrand(brand);
 
         CarType saved = carTypeRepository.save(entity);
 
