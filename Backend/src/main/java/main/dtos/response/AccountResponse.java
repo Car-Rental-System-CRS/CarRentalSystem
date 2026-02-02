@@ -4,8 +4,10 @@ import lombok.*;
 
 import java.util.UUID;
 
-@Getter @Setter
-@AllArgsConstructor @NoArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
+@Setter
+@Getter
 @Builder
 public class AccountResponse {
     private UUID id;

@@ -3,8 +3,10 @@ package main.dtos.response;
 import lombok.*;
 import java.util.UUID;
 
-@Getter @Setter
-@AllArgsConstructor @NoArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
+@Setter
+@Getter
 @Builder
 public class AuthResponse {
     private String token;
