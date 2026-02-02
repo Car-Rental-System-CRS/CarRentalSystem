@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/Label';
 export type AddUnitFormState = {
   license: string;
   importDate: string;
-  gpsId: string;
 };
 
 type Props = {
@@ -58,10 +57,6 @@ export default function AddUnitForm({
             className="text-base py-3 uppercase"
             maxLength={20}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Enter the official license plate number. It will be automatically
-            capitalized.
-          </p>
         </div>
 
         {/* Import Date */}
@@ -79,29 +74,7 @@ export default function AddUnitForm({
             required
             className="py-3"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            The date when this vehicle was imported or added to the fleet.
-          </p>
         </div>
-
-        {/* GPS ID */}
-        <div className="space-y-2">
-          <Label className="text-gray-700 font-medium flex items-center gap-2">
-            <Navigation className="w-4 h-4" />
-            GPS Device ID
-          </Label>
-          <Input
-            value={form.gpsId}
-            onChange={(e) => onChange((p) => ({ ...p, gpsId: e.target.value }))}
-            placeholder="e.g., GPS-001, TRK-2024"
-            className="py-3"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Optional. Enter the GPS tracking device ID if the vehicle is
-            equipped with one.
-          </p>
-        </div>
-
         {/* Actions */}
         <div className="pt-6 border-t">
           <div className="flex gap-3">

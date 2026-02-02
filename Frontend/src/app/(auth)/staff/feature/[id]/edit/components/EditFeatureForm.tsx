@@ -1,11 +1,11 @@
-import { Car, Calendar, Save } from 'lucide-react';
+import { Tag, FileText, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 
 type FormState = {
-  license: string;
-  importDate: string;
+  name: string;
+  description: string;
 };
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
   onCancel: () => void;
 }
 
-export default function EditUnitForm({
+export default function EditFeatureForm({
   form,
   loading,
   onChange,
@@ -26,28 +26,24 @@ export default function EditUnitForm({
   return (
     <div className="bg-white rounded-xl border overflow-hidden">
       <div className="p-6 border-b bg-gray-50">
-        <h2 className="text-xl font-semibold">Edit Unit Information</h2>
+        <h2 className="text-xl font-semibold">Feature Information</h2>
       </div>
 
       <form onSubmit={onSubmit} className="p-6 space-y-6">
-        <Field label="License Plate" icon={<Car />}>
+        <Field label="Feature Name" icon={<Tag />}>
           <Input
-            value={form.license}
-            onChange={(e) =>
-              onChange((p) => ({ ...p, license: e.target.value.toUpperCase() }))
-            }
+            value={form.name}
+            onChange={(e) => onChange((p) => ({ ...p, name: e.target.value }))}
             required
           />
         </Field>
 
-        <Field label="Import Date" icon={<Calendar />}>
+        <Field label="Description" icon={<FileText />}>
           <Input
-            type="date"
-            value={form.importDate}
+            value={form.description}
             onChange={(e) =>
-              onChange((p) => ({ ...p, importDate: e.target.value }))
+              onChange((p) => ({ ...p, description: e.target.value }))
             }
-            required
           />
         </Field>
 

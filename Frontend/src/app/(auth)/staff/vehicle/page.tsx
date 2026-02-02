@@ -8,7 +8,7 @@ import VehicleHeader from './components/VehicleHeader';
 import VehicleStats from './components/VehicleStats';
 import VehicleFilters from './components/VehicleFilters';
 import VehicleTable from './components/VehicleTable';
-import VehiclePagination from './components/VehiclePagination';
+import Pagination from '@/components/Pagination';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -19,9 +19,11 @@ export default function VehiclesPage() {
   const [search, setSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+
   const [sortField, setSortField] = useState<SortField>('carName');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
+  /* ---------- HELPERS ---------- */
   const getBrandName = (brandId: number) =>
     brands.find((b) => b.id === brandId)?.name || 'Unknown';
 
@@ -34,9 +36,11 @@ export default function VehiclesPage() {
     setCurrentPage(1);
   }, [search, brandFilter]);
 
+  /* ---------- FILTER ---------- */
   const filtered = useMemo(() => {
     return vehicleModels.filter((v) => {
       const brandName = getBrandName(v.brandId);
+
       const matchesSearch = `${v.carName} ${brandName}`
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -48,10 +52,11 @@ export default function VehiclesPage() {
     });
   }, [search, brandFilter]);
 
+  /* ---------- SORT ---------- */
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      let aVal: any;
-      let bVal: any;
+      let aVal: string | number;
+      let bVal: string | number;
 
       if (sortField === 'brandName') {
         aVal = getBrandName(a.brandId);
@@ -66,10 +71,21 @@ export default function VehiclesPage() {
     });
   }, [filtered, sortField, sortDirection]);
 
+  /* ---------- PAGINATION ---------- */
   const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginated = sorted.slice(startIndex, endIndex);
+
+  /* ---------- SORT HANDLER ---------- */
+  const handleSortChange = (field: SortField) => {
+    if (field === sortField) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   return (
     <div className="p-8 space-y-6">
@@ -104,17 +120,10 @@ export default function VehiclesPage() {
         getBrandName={getBrandName}
         sortField={sortField}
         sortDirection={sortDirection}
-        onSortChange={(f: SortField) => {
-          if (sortField === f)
-            setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
-          else {
-            setSortField(f);
-            setSortDirection('asc');
-          }
-        }}
+        onSortChange={handleSortChange}
       />
 
-      <VehiclePagination
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         start={startIndex + 1}
