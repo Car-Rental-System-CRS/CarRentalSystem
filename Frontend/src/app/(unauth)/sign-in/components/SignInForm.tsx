@@ -12,6 +12,7 @@ import { Eye, EyeOff, Car, Mail, Lock, Chrome, Facebook } from 'lucide-react';
 import Link from 'next/link';
 import { handleError, handleSuccess } from '@/lib/errorHandler';
 import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -23,6 +24,7 @@ type SignInFormData = z.infer<typeof signInSchema>;
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const {
     register,
@@ -35,11 +37,19 @@ export default function SignInForm() {
   const onSubmit = async (data: SignInFormData) => {
     setIsLoading(true);
     try {
-      await signIn('credentials', {
+      const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
-      })
-      handleSuccess('Sign in successful!', 'Redirecting to home page');
+        redirect: false,
+      });
+
+      if (result?.error) {
+        handleError(new Error(result.error), 'Failed to sign in. Please check your credentials.');
+      } else {
+        handleSuccess('Sign in successful!', 'Redirecting to home page');
+        router.push('/');
+        router.refresh();
+      }
     } catch (error) {
       handleError(error, 'Failed to sign in. Please check your credentials.');
     } finally {

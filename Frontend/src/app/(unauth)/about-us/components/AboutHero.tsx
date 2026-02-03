@@ -4,7 +4,7 @@ export default function AboutHero() {
       {/* Left text */}
       <div>
         <h1 className="text-5xl font-bold leading-tight mb-6">
-          Mioto – <br /> Go with you on <br /> every journey
+          EcoDrive – <br /> Go with you on <br /> every journey
         </h1>
 
         <p className="text-gray-600 leading-relaxed mb-4">
@@ -14,7 +14,7 @@ export default function AboutHero() {
         </p>
 
         <p className="text-gray-600 leading-relaxed">
-          Mioto was created to connect people who need cars with trusted car
+          EcoDrive was created to connect people who need cars with trusted car
           owners. We aim to build a modern, transparent, and safe car-sharing
           community across the country.
         </p>

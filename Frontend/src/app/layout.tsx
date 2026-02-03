@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import '@/styles/global.css';
 import { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
+import { SessionProvider } from '@/components/SessionProvider';
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -21,8 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        <Toaster richColors closeButton position="top-right" />
+        <SessionProvider>
+          {children}
+          <Toaster richColors closeButton position="top-right" />
+        </SessionProvider>
       </body>
     </html>
   );

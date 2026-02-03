@@ -13,7 +13,7 @@ export default function FeaturesSection() {
   const features = [
     {
       image: 'https://www.mioto.vn/static/media/thue_xe_co_tai_xe.a6f7dc54.svg',
-      title: 'Drive safely with Mioto',
+      title: 'Drive safely with EcoDrive',
       description:
         'Your trip is protected with self-drive rental insurance from MIC & DBV (VNI). Maximum compensation up to 2,000,000 VND in case of incidents.',
       color: 'bg-blue-50 border-blue-100',
@@ -70,10 +70,10 @@ export default function FeaturesSection() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
-            Why Choose Mioto
+            Why Choose EcoDrive
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Features that make renting a car on Mioto easier and safer
+            Features that make renting a car on EcoDrive easier and safer
           </p>
         </div>
 
