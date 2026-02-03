@@ -10,13 +10,13 @@ import AboutSection from './components/AboutSection';
 
 
 export const metadata: Metadata = {
-  title: 'Mioto - Self-drive & Travel Car Rental',
+  title: 'EcoDrive - Self-drive & Travel Car Rental',
   description:
     'Self-drive and travel car rental service with affordable prices and simple procedures',
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    title: 'Mioto - Self-drive & Travel Car Rental',
+    title: 'EcoDrive - Self-drive & Travel Car Rental',
     description:
       'Rent 4-seat, 7-seat self-drive and travel cars in Ho Chi Minh City',
     images: ['/og-image.png'],

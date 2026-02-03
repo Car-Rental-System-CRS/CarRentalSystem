@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.util.UUID;
 
+import org.hibernate.annotations.Nationalized;
+
 @Entity
 @Table(name = "accounts", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
 @AllArgsConstructor
@@ -18,6 +20,7 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.UUID) // Hibernate 6.x (Spring Boot 3) OK
     private UUID id;
 
+    @Nationalized
     @Column(nullable = false)
     private String name;
 
@@ -28,6 +31,8 @@ public class Account {
     @Builder.Default
     private Role role = Role.USER;
     
+    private String phone;
+
     @Lob
     @Column(nullable = false)
     private byte[] password;

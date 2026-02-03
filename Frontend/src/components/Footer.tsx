@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* ===== LOGO & CONTACT ===== */}
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold tracking-wide">MIOTO</h2>
+            <h2 className="text-3xl font-bold tracking-wide">EcoDrive</h2>
 
             <div>
               <p className="font-semibold">1900 9217</p>
@@ -16,8 +16,8 @@ export default function Footer() {
             </div>
 
             <div>
-              <p className="font-semibold">contact@mioto.vn</p>
-              <p className="text-gray-500 text-sm">Send email to Mioto</p>
+              <p className="font-semibold">contact@EcoDrive.vn</p>
+              <p className="text-gray-500 text-sm">Send email to EcoDrive</p>
             </div>
 
             {/* Social icons */}
@@ -53,8 +53,8 @@ export default function Footer() {
               <li>Booking Guide</li>
               <li>Payment Guide</li>
               <li>FAQs</li>
-              <li>About Mioto</li>
-              <li>Mioto Blog</li>
+              <li>About EcoDrive</li>
+              <li>EcoDrive Blog</li>
               <li>Careers</li>
             </ul>
           </div>
@@ -75,7 +75,7 @@ export default function Footer() {
 
         {/* ===== COMPANY INFO ===== */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-gray-600 text-sm">
-          <p>© Mioto Asia Joint Stock Company</p>
+          <p>© EcoDrive Asia Joint Stock Company</p>
 
           <p>
             Business Reg No: 0317307544 — Issued: 24-05-22 <br />
@@ -83,7 +83,7 @@ export default function Footer() {
           </p>
 
           <p>
-            Bank Account: CTCP MIOTO ASIA <br />
+            Bank Account: CTCP EcoDrive ASIA <br />
             No: 102-989-1989 — Vietcombank Tan Dinh Branch
           </p>
         </div>

@@ -33,7 +33,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountResponse me(UUID accountId) {
         Account acc = accountRepository.findById(accountId).orElseThrow();
-        return accountMapper.toResponse(acc);
+        return accountMapper.toUserResponseDto(acc);
     }
 
     @Override

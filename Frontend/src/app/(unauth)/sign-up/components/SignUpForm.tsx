@@ -10,6 +10,9 @@ import { Label } from '@/components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Eye, EyeOff, Car, Mail, Lock, User, Phone, Chrome, Facebook } from 'lucide-react';
 import Link from 'next/link';
+import { authService } from '@/services/authService';
+import { handleError, handleSuccess } from '@/lib/errorHandler';
+import { useRouter } from 'next/navigation';
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -28,6 +31,7 @@ export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const {
     register,
@@ -40,11 +44,13 @@ export default function SignUpForm() {
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual sign-up logic
-      console.log('Sign up data:', data);
-      // await fetch('/api/auth/register', { method: 'POST', body: JSON.stringify(data) });
+      await authService.signUp(data.fullName, data.email, data.password, data.phone);
+      handleSuccess('Account created successfully!', 'Please sign in to continue');
+      setTimeout(() => {
+        router.push('/sign-in');
+      }, 1500);
     } catch (error) {
-      console.error('Sign up error:', error);
+      handleError(error, 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }

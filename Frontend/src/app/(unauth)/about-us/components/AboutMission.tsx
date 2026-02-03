@@ -13,7 +13,7 @@ export default function AboutMission() {
           </p>
 
           <p className="text-gray-600">
-            From city drives to long journeys, Mioto helps you explore freely
+            From city drives to long journeys, EcoDrive helps you explore freely
             and confidently with flexible rental options and strong support
             systems.
           </p>
