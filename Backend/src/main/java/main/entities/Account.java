@@ -1,14 +1,12 @@
 package main.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.UUID;
 
 @Entity
+@Table(name = "accounts", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
 @AllArgsConstructor
 @NoArgsConstructor
 @Setter
@@ -17,12 +15,20 @@ import java.util.UUID;
 public class Account {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.UUID) // Hibernate 6.x (Spring Boot 3) OK
     private UUID id;
 
+    @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Role role = Role.USER;
+    
+    @Lob
+    @Column(nullable = false)
     private byte[] password;
 }
