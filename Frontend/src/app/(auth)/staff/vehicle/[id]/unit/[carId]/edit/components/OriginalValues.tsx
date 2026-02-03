@@ -11,10 +11,9 @@ export default function OriginalValues({
     <div className="bg-gray-50 border rounded-xl p-6">
       <h3 className="font-semibold mb-3">Original Values</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <Value label="License Plate" value={unit.license} />
         <Value label="Import Date" value={unit.importDate} />
-        <Value label="GPS ID" value={unit.gpsId || 'None'} />
       </div>
     </div>
   );

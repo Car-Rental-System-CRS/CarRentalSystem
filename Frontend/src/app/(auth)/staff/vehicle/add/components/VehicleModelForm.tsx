@@ -1,79 +1,74 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Save, Car, Tag, Users, Fuel, DollarSign } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 
-import { brands } from '@/data/brands';
-import { features } from '@/data/features';
-
-export type VehicleModelFormValues = {
-  carName: string;
-  brandId: number;
-  numberOfSeats: number;
-  consumption: string;
-  price: number;
-  featureIds: number[];
-};
+import { CarBrand } from '@/types/brand';
+import { CreateCarTypePayload } from '@/types/carType';
 
 type Props = {
-  initialValues?: VehicleModelFormValues;
-  onSubmit: (payload: VehicleModelFormValues) => Promise<void>;
+  brands: CarBrand[];
+  initialValues?: CreateCarTypePayload;
+  onSubmit: (payload: CreateCarTypePayload) => Promise<void>;
   loading?: boolean;
   submitText?: string;
 };
 
 export default function VehicleModelForm({
+  brands,
   initialValues,
   onSubmit,
   loading = false,
   submitText = 'Save',
 }: Props) {
-  const [form, setForm] = useState<VehicleModelFormValues>({
-    carName: initialValues?.carName || '',
-    brandId: initialValues?.brandId || 0,
-    numberOfSeats: initialValues?.numberOfSeats || 5,
-    consumption: initialValues?.consumption || '',
-    price: initialValues?.price || 0,
-    featureIds: initialValues?.featureIds || [],
+  const [form, setForm] = useState<CreateCarTypePayload>({
+    name: '',
+    brandId: '',
+    numberOfSeats: 5,
+    consumptionKwhPerKm: 0,
+    price: 0,
   });
 
-  const handleChange = <K extends keyof VehicleModelFormValues>(
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (initialValues && !initializedRef.current) {
+      setForm(initialValues);
+      initializedRef.current = true;
+    }
+  }, [initialValues]);
+
+  const handleChange = <K extends keyof CreateCarTypePayload>(
     field: K,
-    value: VehicleModelFormValues[K]
+    value: CreateCarTypePayload[K]
   ) => {
     setForm((p) => ({ ...p, [field]: value }));
   };
 
-  const toggleFeature = (id: number) => {
-    setForm((p) => ({
-      ...p,
-      featureIds: p.featureIds.includes(id)
-        ? p.featureIds.filter((f) => f !== id)
-        : [...p.featureIds, id],
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('FORM SUBMIT PAYLOAD', form);
+    console.log('brandId value:', form.brandId);
+    console.log('brandId type:', typeof form.brandId);
     await onSubmit(form);
   };
 
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-6">
-      {/* Model Name */}
+      {/* Name */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Car className="w-4 h-4" /> Model Name *
         </Label>
         <Input
-          value={form.carName}
-          onChange={(e) => handleChange('carName', e.target.value)}
+          value={form.name}
+          onChange={(e) => handleChange('name', e.target.value)}
           required
-          className="py-3"
         />
       </div>
 
@@ -84,8 +79,8 @@ export default function VehicleModelForm({
         </Label>
         <select
           className="w-full border rounded-lg px-4 py-3 text-sm"
-          value={form.brandId || ''}
-          onChange={(e) => handleChange('brandId', Number(e.target.value))}
+          value={form.brandId}
+          onChange={(e) => handleChange('brandId', e.target.value)}
           required
         >
           <option value="">Select brand</option>
@@ -110,18 +105,21 @@ export default function VehicleModelForm({
             onChange={(e) =>
               handleChange('numberOfSeats', Number(e.target.value))
             }
-            className="py-3"
           />
         </div>
 
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
-            <Fuel className="w-4 h-4" /> Consumption
+            <Fuel className="w-4 h-4" /> Consumption (kWh/km)
           </Label>
           <Input
-            value={form.consumption}
-            onChange={(e) => handleChange('consumption', e.target.value)}
-            className="py-3"
+            type="number"
+            step="0.01"
+            min={0}
+            value={form.consumptionKwhPerKm}
+            onChange={(e) =>
+              handleChange('consumptionKwhPerKm', Number(e.target.value))
+            }
           />
         </div>
       </div>
@@ -129,7 +127,7 @@ export default function VehicleModelForm({
       {/* Price */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4" /> Price per Day *
+          <DollarSign className="w-4 h-4" /> Price *
         </Label>
         <Input
           type="number"
@@ -137,34 +135,12 @@ export default function VehicleModelForm({
           value={form.price}
           onChange={(e) => handleChange('price', Number(e.target.value))}
           required
-          className="py-3"
         />
-      </div>
-
-      {/* Features */}
-      <div className="space-y-2">
-        <Label>Features</Label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {features.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => toggleFeature(f.id)}
-              className={`border rounded-lg px-3 py-2 text-sm ${
-                form.featureIds.includes(f.id)
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              {f.name}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Submit */}
       <div className="pt-6 border-t">
-        <Button type="submit" disabled={loading} className="w-full gap-2 py-3">
+        <Button type="submit" disabled={loading} className="w-full gap-2">
           <Save className="w-4 h-4" />
           {loading ? 'Saving...' : submitText}
         </Button>

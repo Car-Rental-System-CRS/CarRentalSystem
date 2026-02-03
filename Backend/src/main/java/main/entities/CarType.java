@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -34,4 +36,11 @@ public class CarType extends AuditableEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
     private CarBrand carBrand;
+
+    @OneToMany(
+            mappedBy = "carType",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<ModelFeature> modelFeatures = new ArrayList<>();
 }

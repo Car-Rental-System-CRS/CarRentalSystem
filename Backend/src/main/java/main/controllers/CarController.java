@@ -58,12 +58,14 @@ public class CarController {
             @RequestParam(required = false) String licensePlate,
             @RequestParam(required = false) LocalDate importFrom,
             @RequestParam(required = false) LocalDate importTo,
+            @RequestParam(required = false) UUID typeId,
             Pageable pageable
     ) {
 
         Specification<Car> specification = Specification.where(CarSpecification.getLicensePlateLike(licensePlate))
                 .and(CarSpecification.getImportDateFrom(importFrom))
-                .and(CarSpecification.getImportDateTo(importTo));
+                .and(CarSpecification.getImportDateTo(importTo))
+                .and(CarSpecification.getTypeId(typeId));
 
         Page<CarResponse> result =
                 carService.getAllCars(pageable, specification);
