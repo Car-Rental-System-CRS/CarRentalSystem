@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/model-features")
+@RequestMapping("/api/model-features")
 public class ModelFeatureController {
 
     private final ModelFeatureService modelFeatureService;
