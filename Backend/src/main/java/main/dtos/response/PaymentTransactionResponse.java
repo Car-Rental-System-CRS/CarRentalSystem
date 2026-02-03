@@ -4,6 +4,7 @@ import lombok.*;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -20,7 +21,7 @@ public class PaymentTransactionResponse {
     private UUID bookingId;
 
     // 💰 Payment info
-    private Long amount; // VND
+    private BigDecimal amount; // VND
     private long payOSPaymentCode;
     private String paymentUrl;
 

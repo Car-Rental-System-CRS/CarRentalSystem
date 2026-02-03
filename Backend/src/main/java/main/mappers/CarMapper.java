@@ -5,6 +5,9 @@ import main.dtos.response.CarResponse;
 import main.entities.Car;
 import main.entities.CarType;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class CarMapper {
     public static Car toEntity(CreateCarRequest request, CarType carType) {
         if (request == null) return null;
@@ -29,5 +32,10 @@ public class CarMapper {
                                 : null
                 )
                 .build();
+    }
+
+    public static List<CarResponse> toResponseList(List<Car> entityList) {
+        if(entityList == null) return null;
+        return entityList.stream().map(CarMapper::toResponse).collect(Collectors.toList());
     }
 }

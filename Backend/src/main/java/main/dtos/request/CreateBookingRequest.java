@@ -12,11 +12,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class CreateBookingRequest {
-
-
     // Car IDs (many cars per booking)
-    // TODO: replace UUID with CarId / Car entity when Car module is ready
-    //private List<UUID> carIds;
+    private List<UUID> carIds;
 
     private LocalDate expectedReceiveDate;
     private LocalDate expectedReturnDate;

@@ -14,6 +14,7 @@ import main.services.PayosService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
 
     @Override
     @Transactional
-    public PaymentTransactionResponse createPayment(UUID bookingId, PaymentPurpose paymentPurpose, Long amount) {
+    public PaymentTransactionResponse createPayment(UUID bookingId, PaymentPurpose paymentPurpose, BigDecimal amount) {
 
         // Fetch booking
         Booking booking = bookingRepository.findById(bookingId)

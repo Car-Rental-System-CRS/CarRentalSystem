@@ -15,6 +15,7 @@ import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 import vn.payos.model.webhooks.Webhook;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,7 +36,7 @@ public class PayosServiceImpl implements PayosService {
     private String cancelPath;
 
     @Override
-    public String createPaymentLink(long payosOrderCode, long amount) {
+    public String createPaymentLink(long payosOrderCode, BigDecimal amount) {
 
         try {
             String returnUrl = frontendBaseUrl + successPath;
@@ -44,7 +45,7 @@ public class PayosServiceImpl implements PayosService {
             CreatePaymentLinkRequest request =
                     CreatePaymentLinkRequest.builder()
                             .orderCode(payosOrderCode) // MUST be unique
-                            .amount(amount)
+                            .amount(amount.longValue())
                             .description("Car rental payment")
                             .returnUrl(returnUrl)
                             .cancelUrl(cancelUrl)
@@ -93,6 +94,7 @@ public class PayosServiceImpl implements PayosService {
             }
 
             transaction.setStatus(PaymentStatus.PAID);
+            //TODO: mark booking status to enum = CONFIRMED if is still enum = CREATED. If enum = CANCELLED (payment too late) then will perform to return money back according to business rule
 
             System.out.println("Thanh toán thành công: " + orderCode);
             return ResponseEntity.ok("OK");

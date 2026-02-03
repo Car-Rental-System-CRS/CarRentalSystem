@@ -4,10 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -43,7 +41,7 @@ public class PaymentTransaction {
     @Column(nullable = false)
     private PaymentPurpose purpose;
 
-    private Long amount; // VND
+    private BigDecimal amount; // VND
 
 
 
@@ -55,13 +53,5 @@ public class PaymentTransaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentStatus status;
-
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(nullable = false)
-    private LocalDateTime lastUpdatedAt;
 
 }

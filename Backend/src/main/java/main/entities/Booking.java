@@ -2,11 +2,10 @@ package main.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import main.enums.BookingStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,7 +16,7 @@ import java.util.UUID;
 @Getter
 @Builder
 @Table(name = "bookings")
-public class Booking {
+public class Booking extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -33,19 +32,17 @@ public class Booking {
 
     // info id
     // damage report id
-    // carId
+    // booking cars
 
-    //prices, not sure??
 
-    private long totalPrice;
-    private long depositPrice;
-    private long bookingPrice;
-    private long rentalPrice;
+
+    private BigDecimal totalPrice;
+    private BigDecimal bookingPrice;
 
     private LocalDate expectedReceiveDate;
     private LocalDate expectedReturnDate;
 
-    // 🔗 Payment transactions
+    // Payment transactions
     @OneToMany(
             mappedBy = "booking",
             cascade = CascadeType.ALL,
@@ -57,7 +54,4 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
 }

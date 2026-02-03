@@ -3,6 +3,7 @@ package main.dtos.response;
 import lombok.*;
 import main.enums.BookingStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,9 +22,11 @@ public class BookingResponse {
     // TODO: replace UUID with CarResponse when Car module is ready
     //private List<UUID> carIds;
 
-    private long totalPrice;
-    private long depositPrice;
-    private long bookingPrice;
+    // List of cars
+    private List<CarResponse> cars;
+
+    private BigDecimal totalPrice;
+    private BigDecimal bookingPrice;
 
     private LocalDate expectedReceiveDate;
     private LocalDate expectedReturnDate;
@@ -32,6 +35,7 @@ public class BookingResponse {
 
     private LocalDateTime createdAt;
 
-    // 💳 Payment summary
+    // Payment summary
     private List<PaymentTransactionResponse> payments;
+
 }
