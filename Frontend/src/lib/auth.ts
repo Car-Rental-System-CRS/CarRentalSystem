@@ -11,12 +11,48 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async authorize(credentials) {
       const { email, password } = credentials as { email: string; password: string };
-      // Replace with your own authentication logic
+      
       if (!email || !password) {
         return null;
       }
       
-      return await authService.signIn(email, password);
+      try {
+        const { user, token } = await authService.signIn(email, password);
+        
+        // Return user with token attached
+        return {
+          ...user,
+          accessToken: token,
+        };
+      } catch (error) {
+        console.error('Auth error:', error);
+        return null;
+      }
     },
   })],
+  callbacks: {
+    async jwt({ token, user }) {
+      // Initial sign in
+      if (user) {
+        token.accessToken = (user as any).accessToken;
+        token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      // Send properties to the client
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        (session as any).accessToken = token.accessToken;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: '/sign-in',
+  },
 });

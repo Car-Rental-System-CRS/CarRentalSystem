@@ -1,7 +1,7 @@
 // components/heroSection.tsx
 'use client';
 
-import { Car, MapPin, Calendar, Clock, Users } from 'lucide-react';
+import { Car, MapPin, Calendar, Clock} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -17,7 +17,7 @@ export default function HeroSection() {
           {/* Header with badges */}
           <div className="flex flex-col items-center text-center mb-16">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight tracking-tight">
-              Mioto — With You On
+              EcoDrive — With You On
               <span className="block text-blue-600 mt-3 pb-4 bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                 Every Journey
               </span>

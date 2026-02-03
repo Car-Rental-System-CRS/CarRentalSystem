@@ -1,0 +1,88 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+  push:
+    branches: ["main", "develop"]
+
+jobs:
+  detect-changes:
+    name: Detect changed modules
+    runs-on: windows-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'Frontend/**'
+            backend:
+              - 'Backend/**'
+
+  # ================= FRONTEND =================
+  frontend:
+    name: Frontend CI
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd Frontend
+          npm ci
+
+      # ---------- TEST + COVERAGE ----------
+      - name: Run unit tests with coverage
+        run: |
+          cd Frontend
+          npm run test -- --coverage
+
+      - name: Check coverage > 90%
+        run: |
+          cd Frontend
+          npx jest --coverage --coverageThreshold='{"global":{"branches":90,"functions":90,"lines":90,"statements":90}}'
+
+  # ================= BACKEND =================
+  backend:
+    name: Backend CI
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "maven"
+
+      # ---------- Spotless check ----------
+      - name: Check code format
+        run: |
+          cd Backend
+          mvn spotless:check
+
+      # ---------- TEST + COVERAGE ----------
+      - name: Run tests with JaCoCo
+        run: |
+          cd Backend
+          mvn clean verify

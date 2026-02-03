@@ -3,7 +3,7 @@ export default function RentalStepsSection() {
   const rentalSteps = [
     {
       step: '01',
-      title: 'Book a car on Mioto app/website',
+      title: 'Book a car on EcoDrive app/website',
       image:
         'https://www.mioto.vn/static/media/cho_thue_xe_co_taigia_re_tphcm.12455eba.svg',
       description: 'Find and book a car that fits your needs',
@@ -40,7 +40,7 @@ export default function RentalStepsSection() {
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Just 4 simple steps to experience fast and easy car rental with
-            Mioto
+            EcoDrive
           </p>
         </div>
 

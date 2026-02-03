@@ -12,7 +12,7 @@ export default function AboutStats() {
     <section className="py-20">
       <div className="container mx-auto px-6">
         <h2 className="text-4xl font-bold text-center mb-12">
-          Mioto in Numbers
+          EcoDrive in Numbers
         </h2>
 
         <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-10 text-center">
