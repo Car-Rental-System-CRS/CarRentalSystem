@@ -27,7 +27,6 @@ export default function VehicleTable({ vehicles, loading = false }: Props) {
             <tr key={v.id} className="hover:bg-gray-50">
               <td className="py-4 px-6">
                 <div className="font-medium">{v.name}</div>
-                <div className="text-xs text-gray-500">ID #{v.id}</div>
               </td>
 
               <td className="py-4 px-6">{v.carBrand?.name ?? '—'}</td>

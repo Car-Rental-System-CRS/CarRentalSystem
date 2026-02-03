@@ -16,7 +16,7 @@ export default function VehicleDetailHeader({ vehicle }: { vehicle: CarType }) {
 
         <div>
           <h1 className="text-3xl font-bold">{vehicle.name}</h1>
-          <p className="text-gray-500 mt-1">Model ID: #{vehicle.id}</p>
+          {/* <p className="text-gray-500 mt-1">Model ID: #{vehicle.id}</p> */}
         </div>
       </div>
     </div>

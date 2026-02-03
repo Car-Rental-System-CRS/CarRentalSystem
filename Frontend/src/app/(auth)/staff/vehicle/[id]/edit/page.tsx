@@ -5,7 +5,7 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
-import VehicleModelForm from '../../add/components/VehicleModelForm';
+import VehicleModelForm from './components/EditVehicleForm';
 import VehicleOriginalValues from './components/VehicleOriginalValues';
 
 import { carBrandService } from '@/services/brandService';
