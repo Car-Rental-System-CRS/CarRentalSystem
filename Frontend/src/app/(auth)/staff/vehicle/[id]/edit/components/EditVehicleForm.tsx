@@ -18,7 +18,7 @@ type Props = {
   submitText?: string;
 };
 
-export default function VehicleModelForm({
+export default function EditVehicleForm({
   brands,
   initialValues,
   onSubmit,
@@ -78,12 +78,10 @@ export default function VehicleModelForm({
           <Tag className="w-4 h-4" /> Brand *
         </Label>
         <select
-          className="w-full border rounded-lg px-4 py-3 text-sm"
+          className="w-full border rounded-lg px-4 py-3 text-sm bg-gray-100 cursor-not-allowed"
           value={form.brandId}
-          onChange={(e) => handleChange('brandId', e.target.value)}
-          required
+          disabled
         >
-          <option value="">Select brand</option>
           {brands.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}

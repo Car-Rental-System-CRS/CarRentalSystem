@@ -2,21 +2,23 @@
 
 import { Button } from '@/components/ui/Button';
 
-interface ConfirmDeleteDialogProps {
+interface DeleteModalProps {
   open: boolean;
   title?: React.ReactNode;
   description?: React.ReactNode;
-  onCancel: () => void;
+  loading?: boolean;
   onConfirm: () => void;
+  onClose: () => void;
 }
 
 export default function DeleteModal({
   open,
   title = 'Delete item?',
   description = 'This action cannot be undone.',
-  onCancel,
+  loading = false,
   onConfirm,
-}: ConfirmDeleteDialogProps) {
+  onClose,
+}: DeleteModalProps) {
   if (!open) return null;
 
   return (
@@ -27,12 +29,12 @@ export default function DeleteModal({
         <p className="text-sm text-gray-600">{description}</p>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
 
-          <Button variant="destructive" onClick={onConfirm}>
-            Delete
+          <Button variant="destructive" onClick={onConfirm} disabled={loading}>
+            {loading ? 'Deleting...' : 'Delete'}
           </Button>
         </div>
       </div>

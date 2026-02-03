@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Car, Calendar, Navigation, Save } from 'lucide-react';
+import { Car, Calendar, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';

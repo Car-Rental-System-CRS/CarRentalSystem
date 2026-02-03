@@ -1,60 +1,103 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { use, useState } from 'react';
-import { notFound } from 'next/navigation';
-
-import { vehicleModels } from '@/data/vehicles';
-import { brands } from '@/data/brands';
-import { features } from '@/data/features';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams, notFound } from 'next/navigation';
 
 import VehicleDetailHeader from './components/VehicleDetailHeader';
 import VehicleStatCards from './components/VehicleStatCards';
 import VehicleBrandCard from './components/VehicleBrandCard';
-import VehicleFeaturesCard from './components/VehicleFeaturesCard';
 import VehicleActionsCard from './components/VehicleActionsCard';
 import DeleteModal from '@/components/DeleteModal';
 
-export default function VehicleDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+import {
+  handleError,
+  handleSuccess,
+  showLoading,
+  dismissToast,
+} from '@/lib/errorHandler';
+
+import { carTypeService } from '@/services/carTypeService';
+import { CarType } from '@/types/carType';
+
+export default function VehicleDetailPage() {
   const router = useRouter();
+  const { id } = useParams<{ id: string }>();
 
-  const vehicle = vehicleModels.find((v) => v.id === Number(id));
-  if (!vehicle) return notFound();
+  /* ---------- STATE ---------- */
+  const [vehicle, setVehicle] = useState<CarType | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [confirmVehicle, setConfirmVehicle] = useState<{
-    id: number;
+  const [confirmDelete, setConfirmDelete] = useState<{
+    id: string;
     name: string;
   } | null>(null);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const brandName =
-    brands.find((b) => b.id === vehicle.brandId)?.name || 'Unknown';
+  /* ---------- FETCH VEHICLE ---------- */
+  useEffect(() => {
+    if (!id) return;
 
-  const vehicleFeatures = features
-    .filter((f) => vehicle.featureIds.includes(f.id))
-    .map((f) => f.name);
+    const fetchVehicle = async () => {
+      try {
+        setLoading(true);
 
+        const res = await carTypeService.getById(id);
+
+        /**
+         * API response shape:
+         * {
+         *   success: boolean
+         *   message: string
+         *   data: CarType
+         * }
+         */
+        setVehicle(res.data.data);
+      } catch (error) {
+        console.error(error);
+        notFound();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicle();
+  }, [id]);
+
+  /* ---------- LOADING / ERROR ---------- */
+  if (loading) {
+    return <div className="p-8 text-gray-500">Loading vehicle...</div>;
+  }
+
+  if (!vehicle) return notFound();
+
+  /* ---------- DELETE ---------- */
   const handleDelete = async () => {
-    if (!confirmVehicle) return;
+    if (!confirmDelete) return;
 
+    const toastId = showLoading('Deleting vehicle model...');
     setIsDeleting(true);
+
     try {
-      console.log('DELETE VEHICLE ID:', confirmVehicle.id);
-      await new Promise((r) => setTimeout(r, 800));
+      await carTypeService.delete(confirmDelete.id);
+
+      handleSuccess(
+        'Vehicle deleted',
+        `"${confirmDelete.name}" has been deleted`
+      );
+
       router.push('/staff/vehicle');
       router.refresh();
+    } catch (error) {
+      handleError(error, 'Failed to delete vehicle');
     } finally {
+      dismissToast(toastId);
       setIsDeleting(false);
-      setConfirmVehicle(null);
+      setConfirmDelete(null);
     }
   };
 
+  /* ---------- RENDER ---------- */
   return (
     <div className="p-8 space-y-6">
       <VehicleDetailHeader vehicle={vehicle} />
@@ -63,37 +106,31 @@ export default function VehicleDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <VehicleBrandCard brandName={brandName} brandId={vehicle.brandId} />
-          <VehicleFeaturesCard features={vehicleFeatures} />
+          <VehicleBrandCard
+            brandName={vehicle.carBrand.name}
+            brandId={vehicle.carBrand.id}
+          />
         </div>
 
         <VehicleActionsCard
           vehicleId={vehicle.id}
-          quantity={vehicle.quantity}
           onDelete={() =>
-            setConfirmVehicle({ id: vehicle.id, name: vehicle.carName })
+            setConfirmDelete({
+              id: vehicle.id,
+              name: vehicle.name,
+            })
           }
         />
       </div>
 
+      {/* ---------- DELETE MODAL (FEATURE STYLE) ---------- */}
       <DeleteModal
-        open={confirmVehicle !== null}
-        title={
-          confirmVehicle ? (
-            <>
-              Are you sure you want to delete{' '}
-              <span className="text-red-600 font-semibold">
-                “{confirmVehicle.name}”
-              </span>
-              ?
-            </>
-          ) : (
-            'Are you sure you want to delete this item?'
-          )
-        }
-        description="This action cannot be undone."
-        onCancel={() => setConfirmVehicle(null)}
+        open={!!confirmDelete}
+        title="Delete vehicle model"
+        description={`Are you sure you want to delete "${confirmDelete?.name}"?`}
+        loading={isDeleting}
         onConfirm={handleDelete}
+        onClose={() => setConfirmDelete(null)}
       />
     </div>
   );

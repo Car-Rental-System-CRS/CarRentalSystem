@@ -1,103 +1,54 @@
-'use client';
+// components/CarTable.tsx
 
 import Link from 'next/link';
-import {
-  Edit,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  ArrowUpDown,
-} from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
+import { Car } from '@/types/car';
 import { Button } from '@/components/ui/Button';
 
-type Unit = {
-  carId: number;
-  license: string;
-  importDate: string;
+type Props = {
+  cars: Car[];
+  loading: boolean;
+  onDelete: (car: Car) => void;
 };
 
-type SortField = 'license' | 'importDate';
-type SortDirection = 'asc' | 'desc';
+export default function CarTable({ cars, loading, onDelete }: Props) {
+  if (loading) {
+    return <div className="p-6 text-gray-500">Loading cars...</div>;
+  }
 
-interface Props {
-  units: Unit[];
-  vehicleId: number;
-  sortField: SortField;
-  sortDirection: SortDirection;
-  onSort: (field: SortField) => void;
-  onDelete: (carId: number) => void;
-  startIndex: number;
-}
-
-export default function VehicleUnitsTable({
-  units,
-  vehicleId,
-  sortField,
-  sortDirection,
-  onSort,
-  onDelete,
-  startIndex,
-}: Props) {
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1" />;
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="w-4 h-4 ml-1" />
-    ) : (
-      <ChevronDown className="w-4 h-4 ml-1" />
-    );
-  };
+  if (cars.length === 0) {
+    return <div className="p-6 text-gray-500">No cars found</div>;
+  }
 
   return (
-    <div className="bg-white rounded-xl border overflow-hidden">
-      <table className="w-full">
+    <div className="bg-white border rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b">
           <tr>
-            <th
-              className="py-4 px-6 text-left text-sm font-semibold cursor-pointer"
-              onClick={() => onSort('license')}
-            >
-              License Plate {getSortIcon('license')}
-            </th>
-            <th
-              className="py-4 px-6 text-left text-sm font-semibold cursor-pointer"
-              onClick={() => onSort('importDate')}
-            >
-              Import Date {getSortIcon('importDate')}
-            </th>
-            <th className="py-4 px-6 text-left text-sm font-semibold">
-              Actions
-            </th>
+            <th className="px-4 py-3 text-left">License Plate</th>
+            <th className="px-4 py-3 text-left">Import Date</th>
+            <th className="px-4 py-3 text-left">Actions</th>
           </tr>
         </thead>
 
-        <tbody className="divide-y">
-          {units.map((unit) => (
-            <tr key={unit.carId} className="hover:bg-gray-50">
-              <td className="py-4 px-6">
-                <div className="font-semibold text-gray-900">
-                  {unit.license}
-                  <span className="ml-2 text-xs font-normal text-gray-500">
-                    ID: {unit.carId}
-                  </span>
-                </div>
-              </td>
-              <td className="py-4 px-6">{unit.importDate}</td>
-              <td className="py-4 px-6">
+        <tbody>
+          {cars.map((car) => (
+            <tr key={car.id} className="border-b last:border-none">
+              <td className="px-4 py-3 font-medium">{car.licensePlate}</td>
+              <td className="px-4 py-3">{car.importDate}</td>
+              <td className="px-4 py-3">
                 <div className="flex gap-2">
                   <Button asChild size="sm" variant="outline">
-                    <Link
-                      href={`/staff/vehicle/${vehicleId}/unit/${unit.carId}/edit`}
-                    >
-                      <Edit className="w-3 h-3 mr-1" /> Edit
+                    <Link href={`unit/${car.id}/edit`}>
+                      <Pencil className="w-4 h-4" />
                     </Link>
                   </Button>
-
                   <Button
-                    size="sm"
                     variant="destructive"
-                    onClick={() => onDelete(unit.carId)}
+                    size="sm"
+                    onClick={() => onDelete(car)}
                   >
-                    <Trash2 className="w-3 h-3 mr-1" /> Delete
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </td>

@@ -1,25 +1,22 @@
 import { Car, Tag, Users, Fuel, DollarSign } from 'lucide-react';
 import { VehicleModel } from '@/data/vehicles';
+import { CarType } from '@/types/carType';
 
-export default function VehicleStatCards({
-  vehicle,
-}: {
-  vehicle: VehicleModel;
-}) {
+export default function VehicleStatCards({ vehicle }: { vehicle: CarType }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <Stat
         title="Daily Rate"
-        value={`$${vehicle.pricePerDay}/day`}
+        value={`$${vehicle.price}/day`}
         icon={<DollarSign className="w-5 h-5" />}
         color="blue"
       />
-      <Stat
+      {/* <Stat
         title="Available Units"
-        value={vehicle.quantity}
+        value={vehicle.}
         icon={<Car className="w-5 h-5" />}
         color="green"
-      />
+      /> */}
       <Stat
         title="Seats"
         value={vehicle.numberOfSeats}
@@ -28,7 +25,7 @@ export default function VehicleStatCards({
       />
       <Stat
         title="Fuel Consumption"
-        value={vehicle.consumption}
+        value={vehicle.consumptionKwhPerKm}
         icon={<Fuel className="w-5 h-5" />}
         color="amber"
       />

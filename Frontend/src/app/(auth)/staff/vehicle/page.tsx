@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { vehicleModels } from '@/data/vehicles';
-import { brands } from '@/data/brands';
+import { useEffect, useState } from 'react';
 
 import VehicleHeader from './components/VehicleHeader';
 import VehicleStats from './components/VehicleStats';
@@ -10,125 +8,141 @@ import VehicleFilters from './components/VehicleFilters';
 import VehicleTable from './components/VehicleTable';
 import Pagination from '@/components/Pagination';
 
+import { carTypeService } from '@/services/carTypeService';
+import { carBrandService } from '@/services/brandService';
+
+import { CarType } from '@/types/carType';
+import { CarBrand } from '@/types/brand';
+
 const ITEMS_PER_PAGE = 10;
 
-type SortField = 'carName' | 'brandName' | 'pricePerDay' | 'quantity';
-type SortDirection = 'asc' | 'desc';
-
 export default function VehiclesPage() {
+  /* ---------- STATE ---------- */
+  const [vehicles, setVehicles] = useState<CarType[]>([]);
+  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [seatFilter, setSeatFilter] = useState('all');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  /* ---------- FILTER ---------- */
   const [search, setSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [sortField, setSortField] = useState<SortField>('carName');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-
-  /* ---------- HELPERS ---------- */
-  const getBrandName = (brandId: number) =>
-    brands.find((b) => b.id === brandId)?.name || 'Unknown';
-
-  const vehicleBrandIds = useMemo(
-    () => Array.from(new Set(vehicleModels.map((v) => v.brandId))),
-    []
-  );
-
+  /* ---------- RESET PAGE ---------- */
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, brandFilter]);
+  }, [search, brandFilter, seatFilter, minPrice, maxPrice]);
 
-  /* ---------- FILTER ---------- */
-  const filtered = useMemo(() => {
-    return vehicleModels.filter((v) => {
-      const brandName = getBrandName(v.brandId);
-
-      const matchesSearch = `${v.carName} ${brandName}`
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-      const matchesBrand =
-        brandFilter === 'all' || v.brandId.toString() === brandFilter;
-
-      return matchesSearch && matchesBrand;
+  /* ---------- FETCH BRANDS ---------- */
+  useEffect(() => {
+    carBrandService.getAll({ page: 0, size: 1000 }).then((res) => {
+      setBrands(res.data.data.items ?? []);
     });
-  }, [search, brandFilter]);
+  }, []);
 
-  /* ---------- SORT ---------- */
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      let aVal: string | number;
-      let bVal: string | number;
+  /* ---------- FETCH VEHICLES ---------- */
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      setLoading(true);
+      try {
+        const res = await carTypeService.getAll({
+          name: search || undefined,
+          brandId: brandFilter !== 'all' ? brandFilter : undefined,
+          numberOfSeats: seatFilter !== 'all' ? Number(seatFilter) : undefined,
+          minPrice: minPrice ? Number(minPrice) : undefined,
+          maxPrice: maxPrice ? Number(maxPrice) : undefined,
+          page: currentPage - 1,
+          size: ITEMS_PER_PAGE,
+        });
 
-      if (sortField === 'brandName') {
-        aVal = getBrandName(a.brandId);
-        bVal = getBrandName(b.brandId);
-      } else {
-        aVal = a[sortField];
-        bVal = b[sortField];
+        const pageData = res.data.data;
+
+        let list: CarType[] = pageData.items ?? [];
+
+        if (brandFilter !== 'all') {
+          list = list.filter((v) => v.carBrand?.id === brandFilter);
+        }
+
+        if (seatFilter !== 'all') {
+          list = list.filter((v) => v.numberOfSeats >= Number(seatFilter));
+        }
+
+        if (minPrice) {
+          list = list.filter((v) => v.price >= Number(minPrice));
+        }
+
+        if (maxPrice) {
+          list = list.filter((v) => v.price <= Number(maxPrice));
+        }
+
+        setVehicles(list);
+
+        const effectiveTotal =
+          brandFilter === 'all' ? pageData.totalItems : list.length;
+
+        setTotal(effectiveTotal);
+        setTotalPages(Math.max(1, Math.ceil(effectiveTotal / ITEMS_PER_PAGE)));
+      } catch (e) {
+        console.error('FETCH VEHICLES FAILED', e);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (sortDirection === 'asc') return aVal > bVal ? 1 : -1;
-      return aVal < bVal ? 1 : -1;
-    });
-  }, [filtered, sortField, sortDirection]);
-
-  /* ---------- PAGINATION ---------- */
-  const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginated = sorted.slice(startIndex, endIndex);
-
-  /* ---------- SORT HANDLER ---------- */
-  const handleSortChange = (field: SortField) => {
-    if (field === sortField) {
-      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
+    fetchVehicles();
+  }, [search, brandFilter, seatFilter, minPrice, maxPrice, currentPage]);
 
   return (
     <div className="p-8 space-y-6">
-      <VehicleHeader total={vehicleModels.length} />
+      <VehicleHeader total={total} />
 
       <VehicleStats
-        totalModels={vehicleModels.length}
-        totalBrands={vehicleBrandIds.length}
-        avgPrice={Math.round(
-          vehicleModels.reduce((s, v) => s + v.pricePerDay, 0) /
-            vehicleModels.length
-        )}
+        totalModels={total}
+        totalBrands={brands.length}
+        avgPrice={
+          vehicles.length
+            ? Math.round(
+                vehicles.reduce((s, v) => s + v.price, 0) / vehicles.length
+              )
+            : 0
+        }
       />
 
       <VehicleFilters
         search={search}
         brandFilter={brandFilter}
-        brandIds={vehicleBrandIds}
-        getBrandName={getBrandName}
+        seatFilter={seatFilter}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        brands={brands}
         onSearchChange={setSearch}
         onBrandChange={setBrandFilter}
+        onSeatChange={setSeatFilter}
+        onMinPriceChange={setMinPrice}
+        onMaxPriceChange={setMaxPrice}
         onReset={() => {
           setSearch('');
           setBrandFilter('all');
+          setSeatFilter('all');
+          setMinPrice('');
+          setMaxPrice('');
         }}
-        total={vehicleModels.length}
-        filtered={filtered.length}
+        total={total}
+        filtered={vehicles.length}
       />
 
-      <VehicleTable
-        vehicles={paginated}
-        getBrandName={getBrandName}
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
-      />
+      <VehicleTable vehicles={vehicles} loading={loading} />
 
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
-        start={startIndex + 1}
-        end={Math.min(endIndex, filtered.length)}
-        total={filtered.length}
+        start={(currentPage - 1) * ITEMS_PER_PAGE + 1}
+        end={Math.min(currentPage * ITEMS_PER_PAGE, total)}
+        total={total}
         onPrev={() => setCurrentPage((p) => Math.max(1, p - 1))}
         onNext={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
         onGoTo={setCurrentPage}

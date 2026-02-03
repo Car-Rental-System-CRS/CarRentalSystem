@@ -1,3 +1,5 @@
+'use client';
+
 import { Tag, FileText, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -12,7 +14,7 @@ interface Props {
   form: FormState;
   loading: boolean;
   onChange: React.Dispatch<React.SetStateAction<FormState>>;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -30,19 +32,21 @@ export default function EditFeatureForm({
       </div>
 
       <form onSubmit={onSubmit} className="p-6 space-y-6">
-        <Field label="Feature Name" icon={<Tag />}>
+        <Field label="Feature Name" icon={<Tag className="w-4 h-4" />}>
           <Input
             value={form.name}
-            onChange={(e) => onChange((p) => ({ ...p, name: e.target.value }))}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, name: e.target.value }))
+            }
             required
           />
         </Field>
 
-        <Field label="Description" icon={<FileText />}>
+        <Field label="Description" icon={<FileText className="w-4 h-4" />}>
           <Input
             value={form.description}
             onChange={(e) =>
-              onChange((p) => ({ ...p, description: e.target.value }))
+              onChange((prev) => ({ ...prev, description: e.target.value }))
             }
           />
         </Field>
