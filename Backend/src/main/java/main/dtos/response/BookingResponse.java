@@ -18,11 +18,6 @@ public class BookingResponse {
 
     private UUID id;
 
-    // 🚗 Booked cars
-    // TODO: replace UUID with CarResponse when Car module is ready
-    //private List<UUID> carIds;
-
-    // List of cars
     private List<CarResponse> cars;
 
     private BigDecimal totalPrice;
@@ -35,7 +30,6 @@ public class BookingResponse {
 
     private LocalDateTime createdAt;
 
-    // Payment summary
     private List<PaymentTransactionResponse> payments;
 
 }

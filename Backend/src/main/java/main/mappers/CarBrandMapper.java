@@ -13,7 +13,7 @@ public class CarBrandMapper {
 
     private final ModelMapper modelMapper;
 
-    public static CarBrand toEntity(CreateCarBrandRequest request) {
+    public CarBrand toEntity(CreateCarBrandRequest request) {
         if (request == null) return null;
 
         return CarBrand.builder()
@@ -21,7 +21,7 @@ public class CarBrandMapper {
                 .build();
     }
 
-    public static CarBrandResponse toResponse(CarBrand entity) {
+    public CarBrandResponse toResponse(CarBrand entity) {
         if (entity == null) return null;
 
         return CarBrandResponse.builder()

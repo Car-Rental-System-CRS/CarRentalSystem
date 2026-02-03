@@ -1,16 +1,15 @@
 package main.services;
 
-import main.dtos.request.CreateBookingRequest;
-import main.dtos.response.BookingResponse;
-import org.apache.coyote.BadRequestException;
-
 import java.util.List;
 import java.util.UUID;
+
+import main.dtos.request.CreateBookingRequest;
+import main.dtos.response.BookingResponse;
 
 public interface BookingService {
 
     // Create booking (account will come from session/JWT later)
-    BookingResponse createBooking(CreateBookingRequest request) ;
+    BookingResponse createBooking(CreateBookingRequest request, UUID accountId) ;
 
     // Get booking by id
     BookingResponse getBookingById(UUID bookingId);

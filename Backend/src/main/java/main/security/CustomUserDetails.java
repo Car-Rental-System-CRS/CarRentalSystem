@@ -13,7 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import main.entities.Role;
+import main.enums.Role;
 
 @AllArgsConstructor
 @NoArgsConstructor

@@ -21,6 +21,8 @@ public interface PaymentTransactionRepository
 
     List<PaymentTransaction> findByBooking_Id(UUID bookingId);
 
+    // Find the latest payment transaction for a booking
+    Optional<PaymentTransaction> findFirstByBooking_IdOrderByIdDesc(UUID bookingId);
 
     Optional<PaymentTransaction> findByPayOSPaymentCode(Long payOSPaymentCode);
 

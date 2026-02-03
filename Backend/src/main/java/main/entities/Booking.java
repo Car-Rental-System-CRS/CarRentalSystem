@@ -22,19 +22,12 @@ public class Booking extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Foreign key to Account
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(
-//            name = "account_id",
-//            nullable = false
-//    )
-//    private Account account;
-
-    // info id
-    // damage report id
-    // booking cars
-
-
+   @ManyToOne(fetch = FetchType.LAZY)
+   @JoinColumn(
+           name = "account_id",
+           nullable = false
+   )
+   private Account account;
 
     private BigDecimal totalPrice;
     private BigDecimal bookingPrice;

@@ -54,7 +54,8 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         String paymentLink =
                 payosService.createPaymentLink(
                         payOSOrderCode,
-                        transaction.getAmount()
+                        transaction.getAmount(),
+                        bookingId
                 );
 
         PaymentTransactionResponse response =paymentTransactionMapper.toPaymentTransactionResponse(transaction);
@@ -66,20 +67,35 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
 
     @Override
     public PaymentTransactionResponse getById(UUID paymentTransactionId) {
-
-        // TODO: fetch payment transaction by id
-        // TODO: map entity -> response
-
-        throw new UnsupportedOperationException("Not implemented yet");
+        PaymentTransaction transaction = paymentTransactionRepository.findById(paymentTransactionId)
+                .orElseThrow(() -> new RuntimeException("Payment transaction not found"));
+        
+        PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
+        
+        // Get payment URL from PayOS if status is PENDING
+        if (transaction.getStatus() == PaymentStatus.PENDING) {
+            String paymentUrl = payosService.getPaymentLink(transaction.getPayOSPaymentCode());
+            response.setPaymentUrl(paymentUrl);
+        }
+        
+        return response;
     }
 
     @Override
     public PaymentTransactionResponse getLatestByBookingId(UUID bookingId) {
-
-        // TODO: fetch latest payment by bookingId (order by createdAt desc)
-        // TODO: map entity -> response
-
-        throw new UnsupportedOperationException("Not implemented yet");
+        PaymentTransaction transaction = paymentTransactionRepository
+                .findFirstByBooking_IdOrderByIdDesc(bookingId)
+                .orElseThrow(() -> new RuntimeException("No payment transaction found for booking"));
+        
+        PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
+        
+        // Get payment URL from PayOS if status is PENDING
+        if (transaction.getStatus() == PaymentStatus.PENDING) {
+            String paymentUrl = payosService.getPaymentLink(transaction.getPayOSPaymentCode());
+            response.setPaymentUrl(paymentUrl);
+        }
+        
+        return response;
     }
 
     @Override

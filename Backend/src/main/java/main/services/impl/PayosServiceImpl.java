@@ -2,14 +2,17 @@ package main.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import main.entities.PaymentTransaction;
+import main.enums.BookingStatus;
 import main.enums.PaymentStatus;
 import main.repositories.PaymentTransactionRepository;
 import main.services.PayosService;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
+
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
@@ -18,6 +21,7 @@ import vn.payos.model.webhooks.Webhook;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,11 +40,11 @@ public class PayosServiceImpl implements PayosService {
     private String cancelPath;
 
     @Override
-    public String createPaymentLink(long payosOrderCode, BigDecimal amount) {
+    public String createPaymentLink(long payosOrderCode, BigDecimal amount, UUID bookingId) {
 
         try {
-            String returnUrl = frontendBaseUrl + successPath;
-            String cancelUrl = frontendBaseUrl + cancelPath;
+            String returnUrl = frontendBaseUrl + successPath + "?bookingId=" + bookingId;
+            String cancelUrl = frontendBaseUrl + cancelPath + "?bookingId=" + bookingId;
 
             CreatePaymentLinkRequest request =
                     CreatePaymentLinkRequest.builder()
@@ -94,6 +98,8 @@ public class PayosServiceImpl implements PayosService {
             }
 
             transaction.setStatus(PaymentStatus.PAID);
+            transaction.getBooking().setStatus(BookingStatus.CONFIRMED);
+            paymentTransactionRepository.save(transaction);
             //TODO: mark booking status to enum = CONFIRMED if is still enum = CREATED. If enum = CANCELLED (payment too late) then will perform to return money back according to business rule
 
             System.out.println("Thanh toán thành công: " + orderCode);

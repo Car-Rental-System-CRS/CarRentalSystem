@@ -21,6 +21,7 @@ interface AccountResponse {
     id: string;
     name: string;
     email: string;
+    phone: string;
   };
   timestamp: string;
 }
@@ -52,6 +53,7 @@ export const authService = {
       id: userData.id,
       name: userData.name,
       email: userData.email,
+      phone: userData.phone,
     };
 
     return { user, token };

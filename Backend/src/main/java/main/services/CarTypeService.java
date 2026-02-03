@@ -6,12 +6,12 @@ import main.entities.CarType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface CarTypeService {
-    CarTypeResponse createType(CreateCarTypeRequest request);
+    CarTypeResponse createType(CreateCarTypeRequest request, MultipartFile[] images);
 
     CarTypeResponse getTypeById(UUID id);
 
@@ -20,7 +20,11 @@ public interface CarTypeService {
             Specification<CarType> specification
     );
 
-    CarTypeResponse updateType(UUID id, CreateCarTypeRequest request);
+    CarTypeResponse updateType(UUID id, CreateCarTypeRequest request, MultipartFile[] images);
 
     void deleteType(UUID id);
+    
+    CarTypeResponse addImagesToCarType(UUID carTypeId, MultipartFile[] images);
+    
+    void removeImageFromCarType(UUID imageId);
 }

@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,6 +28,9 @@ class CarBrandServiceImplTest {
     @Mock
     private CarBrandRepository carBrandRepository;
 
+    @Mock
+    private CarBrandMapper carBrandMapper;
+
     @InjectMocks
     private CarBrandServiceImpl carBrandService;
 
@@ -43,20 +45,19 @@ class CarBrandServiceImplTest {
         CarBrand saved = new CarBrand();
         CarBrandResponse response = new CarBrandResponse();
 
-        try (MockedStatic<CarBrandMapper> mapper = mockStatic(CarBrandMapper.class)) {
+        when(carBrandMapper.toEntity(request))
+                .thenReturn(entity);
 
-            mapper.when(() -> CarBrandMapper.toEntity(request))
-                    .thenReturn(entity);
+        when(carBrandRepository.save(entity)).thenReturn(saved);
 
-            when(carBrandRepository.save(entity)).thenReturn(saved);
+        when(carBrandMapper.toResponse(saved))
+                .thenReturn(response);
 
-            mapper.when(() -> CarBrandMapper.toResponse(saved))
-                    .thenReturn(response);
+        CarBrandResponse result = carBrandService.createBrand(request);
 
-            CarBrandResponse result = carBrandService.createBrand(request);
-
-            assertNotNull(result);
-        }
+        assertNotNull(result);
+        verify(carBrandMapper).toEntity(request);
+        verify(carBrandMapper).toResponse(saved);
     }
 
     // ===== GET BY ID =====
@@ -71,15 +72,13 @@ class CarBrandServiceImplTest {
         when(carBrandRepository.findById(id))
                 .thenReturn(Optional.of(entity));
 
-        try (MockedStatic<CarBrandMapper> mapper = mockStatic(CarBrandMapper.class)) {
+        when(carBrandMapper.toResponse(entity))
+                .thenReturn(response);
 
-            mapper.when(() -> CarBrandMapper.toResponse(entity))
-                    .thenReturn(response);
+        CarBrandResponse result = carBrandService.getBrandById(id);
 
-            CarBrandResponse result = carBrandService.getBrandById(id);
-
-            assertNotNull(result);
-        }
+        assertNotNull(result);
+        verify(carBrandMapper).toResponse(entity);
     }
 
     // ===== GET ALL =====
@@ -98,16 +97,14 @@ class CarBrandServiceImplTest {
                 any(Pageable.class)
         )).thenReturn(page);
 
-        try (MockedStatic<CarBrandMapper> mapper = mockStatic(CarBrandMapper.class)) {
+        when(carBrandMapper.toResponse(entity))
+                .thenReturn(response);
 
-            mapper.when(() -> CarBrandMapper.toResponse(entity))
-                    .thenReturn(response);
+        Page<CarBrandResponse> result =
+                carBrandService.getAllBrands(pageable, null);
 
-            Page<CarBrandResponse> result =
-                    carBrandService.getAllBrands(pageable, null);
-
-            assertEquals(1, result.getTotalElements());
-        }
+        assertEquals(1, result.getTotalElements());
+        verify(carBrandMapper).toResponse(entity);
     }
 
 
@@ -130,15 +127,13 @@ class CarBrandServiceImplTest {
         when(carBrandRepository.save(entity))
                 .thenReturn(saved);
 
-        try (MockedStatic<CarBrandMapper> mapper = mockStatic(CarBrandMapper.class)) {
+        when(carBrandMapper.toResponse(saved))
+                .thenReturn(response);
 
-            mapper.when(() -> CarBrandMapper.toResponse(saved))
-                    .thenReturn(response);
+        CarBrandResponse result = carBrandService.updateBrand(id, request);
 
-            CarBrandResponse result = carBrandService.updateBrand(id, request);
-
-            assertNotNull(result);
-        }
+        assertNotNull(result);
+        verify(carBrandMapper).toResponse(saved);
     }
 
     // ===== DELETE =====

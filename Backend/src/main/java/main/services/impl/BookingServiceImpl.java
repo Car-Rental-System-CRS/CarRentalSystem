@@ -1,10 +1,19 @@
 package main.services.impl;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateBookingRequest;
 import main.dtos.response.BookingResponse;
 import main.dtos.response.CarResponse;
 import main.dtos.response.PaymentTransactionResponse;
+import main.entities.Account;
 import main.entities.Booking;
 import main.entities.BookingCar;
 import main.entities.Car;
@@ -12,24 +21,12 @@ import main.enums.BookingStatus;
 import main.enums.PaymentPurpose;
 import main.mappers.BookingMapper;
 import main.mappers.CarMapper;
-import main.mappers.PaymentTransactionMapper;
+import main.repositories.AccountRepository;
 import main.repositories.BookingCarRepository;
 import main.repositories.BookingRepository;
 import main.repositories.CarRepository;
-import main.repositories.CarTypeRepository;
 import main.services.BookingService;
-import main.services.CarTypeService;
 import main.services.PaymentTransactionService;
-import org.apache.coyote.BadRequestException;
-import org.apache.tomcat.util.bcel.Const;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -40,9 +37,11 @@ public class BookingServiceImpl implements BookingService {
     private final BookingMapper bookingMapper;
     private final BookingCarRepository bookingCarRepository;
     private final CarRepository carRepository;
+    private final AccountRepository accountRepository;
+
 
     //===DEFINE BUSINESS RULES:====
-    private final BigDecimal DPB = BigDecimal.valueOf(1000) ; //default price added per booking
+    private final BigDecimal DPB = BigDecimal.valueOf(2000) ; //default price added per booking
     private final int IDAER = 1; //invalid days after each rental
     private final List<BookingStatus> blockingStatuses = List.of(
             BookingStatus.CREATED,
@@ -52,7 +51,7 @@ public class BookingServiceImpl implements BookingService {
     //=============================
 
     @Override
-    public BookingResponse createBooking(CreateBookingRequest request) {
+    public BookingResponse createBooking(CreateBookingRequest request, UUID accountId) {
 
         // TODO: get Account from session/JWT (do NOT take from request)
         // Account account = authContext.getCurrentAccount();
@@ -81,14 +80,17 @@ public class BookingServiceImpl implements BookingService {
             throw new UnsupportedOperationException("Car IDs not available!");
         }
 
+        Account account = accountRepository.findById(accountId).orElseThrow();
 
         // Saves
         Booking booking =  Booking.builder()
                 //...
+                .account(account)
                 .expectedReceiveDate(expectedReceiveDate)
                 .expectedReturnDate(expectedReturnDate)
                 .status(BookingStatus.CREATED)
                 .build();
+            
 
         Booking finalbooking = bookingRepository.save(booking);
 
@@ -110,7 +112,6 @@ public class BookingServiceImpl implements BookingService {
         BigDecimal bookingPrice = calculateBookingPrice(cars,expectedReceiveDate,expectedReturnDate);
         finalbooking.setBookingPrice(bookingPrice);
 
-        // ✅ Create booking payment
         PaymentTransactionResponse payment =
                 paymentTransactionService.createPayment(
                         finalbooking.getId(),
@@ -142,15 +143,28 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponse getBookingById(UUID bookingId) {
 
-        // TODO: fetch booking by id
-        Booking booking = bookingRepository.findById(bookingId).orElse(null);
+        // Fetch booking by id
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
+        // Fetch cars associated with this booking
+        List<BookingCar> bookingCars = bookingCarRepository.findByBookingId(bookingId);
+        List<Car> cars = bookingCars.stream()
+                .map(BookingCar::getCar)
+                .toList();
+        
+        // Map booking to response
         BookingResponse response = bookingMapper.toBookingResponseDto(booking);
+        
+        // Set cars
+        response.setCars(CarMapper.toResponseList(cars));
+        
+        // Set payments
         response.setPayments(paymentTransactionService.getAllByBookingId(bookingId));
+        
         return response;
 
         // TODO: verify ownership (current user)
-        // TODO: map to BookingResponse
     }
 
     @Override

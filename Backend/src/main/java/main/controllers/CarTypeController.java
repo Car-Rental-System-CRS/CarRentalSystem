@@ -12,8 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -26,9 +28,11 @@ public class CarTypeController {
 
     private final CarTypeService carTypeService;
 
-    @PostMapping
-    public ResponseEntity<APIResponse<CarTypeResponse>> create(@RequestBody CreateCarTypeRequest request) {
-        CarTypeResponse data = carTypeService.createType(request);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<APIResponse<CarTypeResponse>> create(
+            @ModelAttribute CreateCarTypeRequest request,
+            @RequestParam(value = "images", required = false) MultipartFile[] images) {
+        CarTypeResponse data = carTypeService.createType(request, images);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 APIResponse.<CarTypeResponse>builder()
                         .success(true)
@@ -85,11 +89,12 @@ public class CarTypeController {
         );
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<APIResponse<CarTypeResponse>> update(
             @PathVariable UUID id,
-            @RequestBody CreateCarTypeRequest request) {
-        CarTypeResponse data = carTypeService.updateType(id, request);
+            @ModelAttribute CreateCarTypeRequest request,
+            @RequestParam(value = "images", required = false) MultipartFile[] images) {
+        CarTypeResponse data = carTypeService.updateType(id, request, images);
         return ResponseEntity.ok(
                 APIResponse.<CarTypeResponse>builder()
                         .success(true)
@@ -107,6 +112,34 @@ public class CarTypeController {
                 APIResponse.<Void>builder()
                         .success(true)
                         .message("Car type deleted")
+                        .data(null)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<APIResponse<CarTypeResponse>> addImages(
+            @PathVariable UUID id,
+            @RequestParam("images") MultipartFile[] images) {
+        CarTypeResponse data = carTypeService.addImagesToCarType(id, images);
+        return ResponseEntity.ok(
+                APIResponse.<CarTypeResponse>builder()
+                        .success(true)
+                        .message("Images added to car type")
+                        .data(data)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @DeleteMapping("/images/{imageId}")
+    public ResponseEntity<APIResponse<Void>> removeImage(@PathVariable UUID imageId) {
+        carTypeService.removeImageFromCarType(imageId);
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .success(true)
+                        .message("Image removed from car type")
                         .data(null)
                         .timestamp(Instant.now())
                         .build()

@@ -15,6 +15,7 @@ public class CreateCarTypeRequest {
     private String name;
     private int numberOfSeats;
     // kWh per km
+    private String description;
     private double consumptionKwhPerKm;
     private BigDecimal price;
     private UUID brandId;

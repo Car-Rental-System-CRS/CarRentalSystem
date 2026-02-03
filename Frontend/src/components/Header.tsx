@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { signOut } from 'next-auth/react';
+import { BookingCart } from '@/components/BookingCart';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -58,16 +59,27 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-8">
             {/* Regular links */}
             <Link
+              href="/vehicles"
+              className={cn(
+                'text-gray-800 hover:text-blue-600 transition-colors text-lg font-medium',
+                pathname.startsWith('/vehicles') && 'text-blue-600 font-semibold'
+              )}
+            >
+              Vehicles
+            </Link>
 
+            <Link
               href="/about-us"
               className={cn(
                 'text-gray-800 hover:text-blue-600 transition-colors text-lg font-medium',
                 pathname === '/about-us' && 'text-blue-600 font-semibold'
-
               )}
             >
               About EcoDrive
             </Link>
+
+            {/* Booking Cart */}
+            <BookingCart />
 
             {/* Divider */}
             <div className="h-8 w-px bg-gray-300"></div>
@@ -168,6 +180,19 @@ export default function Header() {
           <div className="md:hidden border-t py-6">
             <div className="space-y-4">
               {/* Regular nav items */}
+              <Link
+                href="/vehicles"
+                className={cn(
+                  'block py-3 px-6 text-lg rounded-lg',
+                  pathname.startsWith('/vehicles')
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'text-gray-800 hover:bg-gray-50'
+                )}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Vehicles
+              </Link>
+
               <Link
                 href="/about-us"
                 className={cn(

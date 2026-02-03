@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import org.hibernate.annotations.Nationalized;
 
+import main.enums.Role;
+
 @Entity
 @Table(name = "accounts", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
 @AllArgsConstructor
@@ -14,7 +16,7 @@ import org.hibernate.annotations.Nationalized;
 @Setter
 @Getter
 @Builder
-public class Account {
+public class Account extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID) // Hibernate 6.x (Spring Boot 3) OK

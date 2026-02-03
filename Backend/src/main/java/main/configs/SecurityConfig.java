@@ -37,6 +37,7 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_APIS = {
         "/api/auth/**",
+        "/api/payos/webhook"
     };
 
     @Bean
