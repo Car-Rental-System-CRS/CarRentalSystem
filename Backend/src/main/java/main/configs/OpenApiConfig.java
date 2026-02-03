@@ -1,5 +1,6 @@
 package main.configs;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
@@ -20,10 +21,9 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("Demo Auth API")
-                        .description("Register / Login / Logout with JWT (Spring Boot 3)")
+                        .title("Car Rental System API Documentation")
                         .version("v1"))
-                .components(new io.swagger.v3.oas.models.Components()
+                .components(new Components()
                         .addSecuritySchemes("bearer-jwt", bearerScheme))
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
     }

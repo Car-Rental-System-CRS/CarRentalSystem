@@ -6,19 +6,16 @@ import main.entities.Account;
 import main.mappers.AccountMapper;
 import main.repositories.AccountRepository;
 import main.services.AccountService;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.UUID;
+
+import main.security.CustomUserDetails;
 
 @Service
 @RequiredArgsConstructor
-public class AccountServiceImpl implements AccountService, UserDetailsService {
+public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
@@ -34,22 +31,17 @@ public class AccountServiceImpl implements AccountService, UserDetailsService {
     }
 
     @Override
-    public AccountResponse me() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        Account acc = accountRepository.findByEmail(email).orElseThrow();
+    public AccountResponse me(UUID accountId) {
+        Account acc = accountRepository.findById(accountId).orElseThrow();
         return accountMapper.toResponse(acc);
     }
 
-    // Chuyển Account -> UserDetails (ROLE_USER mặc định)
     @Override
-    public UserDetails loadUserByUsername(String username) {
-        Account acc = accountRepository.findByEmail(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String encoded = new String(acc.getPassword(), StandardCharsets.UTF_8);
-        return User.withUsername(acc.getEmail())
-                .password(encoded)
-                .roles("USER")
+    public CustomUserDetails loadUserByUsername(String accountId) {
+        Account acc = accountRepository.findById(UUID.fromString(accountId)).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return CustomUserDetails.builder()
+                .accountId(acc.getId())
+                .role(acc.getRole())
                 .build();
     }
 }

@@ -24,7 +24,10 @@ public class Account {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    // Lưu hash BCRYPT dưới dạng bytes (UTF-8)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Role role = Role.USER;
+    
     @Lob
     @Column(nullable = false)
     private byte[] password;
