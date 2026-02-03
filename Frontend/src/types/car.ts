@@ -20,7 +20,7 @@ export type GetAllCarParams = {
   licensePlate?: string;
   importFrom?: string; // yyyy-MM-dd
   importTo?: string; // yyyy-MM-dd
-
+  typeId?: string;
   page?: number;
   size?: number;
   sort?: string;

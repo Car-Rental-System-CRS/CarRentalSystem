@@ -1,9 +1,20 @@
-// src/types/modelFeature.ts
+export type ModelFeatureRequest = {
+  typeId: string;
+  featureIds: string[];
+};
+export type PageResponse<T> = {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+};
 
 export interface ModelFeature {
-  id: string;
-  typeId: string;
   featureId: string;
-  featureName: string;
-  featureDescription?: string;
+  feature: {
+    id: string;
+    name: string;
+    description?: string;
+  };
 }

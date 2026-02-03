@@ -6,9 +6,6 @@ export interface CarFeature {
   description?: string;
 }
 
-/**
- * Page response mapping từ BE
- */
 export interface PageResponse<T> {
   items: T[];
   page: number;
