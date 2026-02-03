@@ -6,6 +6,14 @@ import { ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import FeatureForm from './components/FeatureForm';
+import { featureService } from '@/services/featureService';
+
+import {
+  handleError,
+  handleSuccess,
+  showLoading,
+  dismissToast,
+} from '@/lib/errorHandler';
 
 export default function AddFeaturePage() {
   const router = useRouter();
@@ -15,15 +23,34 @@ export default function AddFeaturePage() {
     name: string;
     description?: string;
   }) => {
-    setLoading(true);
+    let toastId: string | number | null = null;
 
-    console.log('CREATE FEATURE:', payload);
+    try {
+      setLoading(true);
 
-    // TODO: POST /api/features
-    await new Promise((r) => setTimeout(r, 800));
+      toastId = showLoading('Creating feature...');
 
-    router.push('/staff/feature');
-    router.refresh();
+      await featureService.create(payload);
+
+      if (toastId !== null) {
+        dismissToast(toastId);
+      }
+
+      handleSuccess('Feature created successfully');
+
+      router.push('/staff/feature');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+
+      if (toastId !== null) {
+        dismissToast(toastId);
+      }
+
+      handleError(err, 'Create feature failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -13,7 +13,7 @@ interface Props {
   form: FormState;
   loading: boolean;
   onChange: React.Dispatch<React.SetStateAction<FormState>>;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -31,11 +31,14 @@ export default function EditBrandForm({
       </div>
 
       <form onSubmit={onSubmit} className="p-6 space-y-6">
-        <Field label="Brand Name" icon={<Tag />}>
+        <Field label="Brand Name" icon={<Tag className="w-4 h-4" />}>
           <Input
             value={form.name}
-            onChange={(e) => onChange((p) => ({ ...p, name: e.target.value }))}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, name: e.target.value }))
+            }
             required
+            placeholder="e.g. Toyota"
           />
         </Field>
 

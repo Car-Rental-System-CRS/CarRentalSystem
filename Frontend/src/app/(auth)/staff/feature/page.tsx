@@ -1,7 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { features } from '@/data/features';
+import {
+  handleError,
+  handleSuccess,
+  showLoading,
+  dismissToast,
+} from '@/lib/errorHandler';
+
+import { useEffect, useState } from 'react';
 
 import FeatureHeader from './components/FeatureHeader';
 import FeatureStats from './components/FeatureStats';
@@ -10,130 +16,116 @@ import FeatureTable from './components/FeatureTable';
 import Pagination from '@/components/Pagination';
 import DeleteModal from '@/components/DeleteModal';
 
+import { featureService } from '@/services/featureService';
+import { CarFeature } from '@/types/feature';
+
 const ITEMS_PER_PAGE = 10;
 
-type SortField = 'name';
-type SortDirection = 'asc' | 'desc';
-
 export default function FeaturesPage() {
+  /* ---------- DATA ---------- */
+  const [features, setFeatures] = useState<CarFeature[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  /* ---------- UI STATE ---------- */
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const [confirmFeature, setConfirmFeature] = useState<{
-    id: number;
+  const [confirm, setConfirm] = useState<{
+    id: string;
     name: string;
   } | null>(null);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
+  /* ---------- RESET PAGE WHEN SEARCH ---------- */
   useEffect(() => {
     setCurrentPage(1);
   }, [search]);
 
-  /* ---------- FILTER ---------- */
-  const filtered = useMemo(() => {
-    return features.filter((f) =>
-      f.name.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search]);
+  /* ---------- FETCH FROM BACKEND ---------- */
+  const fetchFeatures = async () => {
+    setLoading(true);
+    try {
+      const res = await featureService.getAll({
+        name: search || undefined,
+        page: currentPage - 1, // Spring Pageable = 0-based
+        size: ITEMS_PER_PAGE,
+      });
 
-  /* ---------- SORT ---------- */
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const aVal = a[sortField];
-      const bVal = b[sortField];
-
-      if (sortDirection === 'asc') return aVal.localeCompare(bVal);
-      return bVal.localeCompare(aVal);
-    });
-  }, [filtered, sortField, sortDirection]);
-
-  /* ---------- PAGINATION ---------- */
-  const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginated = sorted.slice(startIndex, endIndex);
-
-  /* ---------- SORT HANDLER ---------- */
-  const handleSortChange = (field: SortField) => {
-    if (field === sortField) {
-      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
+      const page = res.data.data;
+      setFeatures(page.items);
+      setTotal(page.totalItems);
+      setTotalPages(page.totalPages);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ---------- DELETE HANDLER ---------- */
-  const handleDelete = async () => {
-    if (!confirmFeature) return;
+  useEffect(() => {
+    fetchFeatures();
+  }, [search, currentPage]);
 
+  /* ---------- DELETE ---------- */
+  const handleDelete = async () => {
+    if (!confirm) return;
+
+    const toastId = showLoading('Deleting feature...');
     setIsDeleting(true);
+
     try {
-      console.log('DELETE FEATURE ID:', confirmFeature.id);
-      await new Promise((r) => setTimeout(r, 800));
-      // 👉 API call later
+      await featureService.delete(confirm.id);
+
+      handleSuccess('Feature deleted', `"${confirm.name}" has been deleted`);
+
+      await fetchFeatures();
+    } catch (error) {
+      handleError(error, 'Failed to delete feature');
     } finally {
+      dismissToast(toastId);
       setIsDeleting(false);
-      setConfirmFeature(null);
+      setConfirm(null);
     }
   };
 
   return (
     <div className="p-8 space-y-6">
-      <FeatureHeader total={features.length} />
-
-      <FeatureStats total={features.length} />
+      <FeatureHeader total={total} />
+      <FeatureStats total={total} />
 
       <FeatureFilters
         search={search}
         onSearchChange={setSearch}
         onReset={() => setSearch('')}
-        total={features.length}
-        filtered={filtered.length}
+        total={total}
+        filtered={features.length}
       />
 
       <FeatureTable
-        features={paginated}
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
-        onDelete={(feature) =>
-          setConfirmFeature({ id: feature.id, name: feature.name })
-        }
+        features={features}
+        loading={loading}
+        onDelete={(f) => setConfirm({ id: f.id, name: f.name })}
       />
 
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
-        start={startIndex + 1}
-        end={Math.min(endIndex, filtered.length)}
-        total={filtered.length}
+        start={(currentPage - 1) * ITEMS_PER_PAGE + 1}
+        end={Math.min(currentPage * ITEMS_PER_PAGE, total)}
+        total={total}
         onPrev={() => setCurrentPage((p) => Math.max(1, p - 1))}
         onNext={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
         onGoTo={setCurrentPage}
       />
 
       <DeleteModal
-        open={confirmFeature !== null}
-        title={
-          confirmFeature ? (
-            <>
-              Are you sure you want to delete{' '}
-              <span className="text-red-600 font-semibold">
-                “{confirmFeature.name}”
-              </span>
-              ?
-            </>
-          ) : (
-            'Are you sure you want to delete this item?'
-          )
-        }
-        description="This action cannot be undone."
-        onCancel={() => setConfirmFeature(null)}
+        open={!!confirm}
+        title="Delete feature"
+        description={`Are you sure you want to delete "${confirm?.name}"?`}
+        loading={isDeleting}
         onConfirm={handleDelete}
+        onClose={() => setConfirm(null)}
       />
     </div>
   );

@@ -1,9 +1,9 @@
 'use client';
 
-import { VehicleModel } from '@/data/vehicles';
+import { CarType } from '@/types/carType';
 
 type Props = {
-  vehicle: VehicleModel;
+  vehicle: CarType;
 };
 
 export default function VehicleOriginalValues({ vehicle }: Props) {
@@ -14,12 +14,12 @@ export default function VehicleOriginalValues({ vehicle }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
           <p className="text-gray-500">Model</p>
-          <p className="font-medium">{vehicle.carName}</p>
+          <p className="font-medium">{vehicle.name}</p>
         </div>
 
         <div>
           <p className="text-gray-500">Brand ID</p>
-          <p className="font-medium">{vehicle.brandId}</p>
+          <p className="font-medium">{vehicle.carBrand.name}</p>
         </div>
 
         <div>
@@ -29,7 +29,7 @@ export default function VehicleOriginalValues({ vehicle }: Props) {
 
         <div>
           <p className="text-gray-500">Price/Day</p>
-          <p className="font-medium">${vehicle.pricePerDay}</p>
+          <p className="font-medium">${vehicle.price}</p>
         </div>
       </div>
     </div>

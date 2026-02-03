@@ -1,13 +1,9 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { VehicleModel } from '@/data/vehicles';
+import { CarType } from '@/types/carType';
 
-export default function VehicleDetailHeader({
-  vehicle,
-}: {
-  vehicle: VehicleModel;
-}) {
+export default function VehicleDetailHeader({ vehicle }: { vehicle: CarType }) {
   return (
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-4">
@@ -19,7 +15,7 @@ export default function VehicleDetailHeader({
         </Button>
 
         <div>
-          <h1 className="text-3xl font-bold">{vehicle.carName}</h1>
+          <h1 className="text-3xl font-bold">{vehicle.name}</h1>
           <p className="text-gray-500 mt-1">Model ID: #{vehicle.id}</p>
         </div>
       </div>

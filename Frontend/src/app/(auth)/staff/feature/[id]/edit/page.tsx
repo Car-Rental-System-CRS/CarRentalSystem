@@ -1,13 +1,21 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { features } from '@/data/features';
-import { notFound } from 'next/navigation';
 
 import EditHeader from './components/EditHeader';
 import EditFeatureForm from './components/EditFeatureForm';
 import OriginalValues from './components/OriginalValues';
+
+import { featureService } from '@/services/featureService';
+import { CarFeature } from '@/types/feature';
+
+import {
+  handleError,
+  handleSuccess,
+  showLoading,
+  dismissToast,
+} from '@/lib/errorHandler';
 
 export default function EditFeaturePage({
   params,
@@ -17,29 +25,69 @@ export default function EditFeaturePage({
   const { id } = use(params);
   const router = useRouter();
 
-  const feature = features.find((f) => f.id === Number(id));
-  if (!feature) return notFound();
-
+  const [feature, setFeature] = useState<CarFeature | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+  });
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    name: feature.name,
-    description: feature.description ?? '',
-  });
+  /* ---------- FETCH FEATURE ---------- */
+  useEffect(() => {
+    const fetchFeature = async () => {
+      try {
+        const res = await featureService.getById(id);
+        const data = res.data.data;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+        setFeature(data);
+        setForm({
+          name: data.name,
+          description: data.description ?? '',
+        });
+      } catch (err) {
+        handleError(err, 'Failed to load feature');
+        router.push('/404');
+      }
+    };
+
+    fetchFeature();
+  }, [id, router]);
+
+  if (!feature) return null;
+
+  /* ---------- UPDATE ---------- */
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
 
-    console.log('UPDATE FEATURE', {
-      id: feature.id,
-      ...form,
-    });
+    let toastId: string | number | null = null;
 
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      setLoading(true);
 
-    router.push('/staff/feature');
-    router.refresh();
+      toastId = showLoading('Updating feature...');
+
+      await featureService.update(id, form);
+
+      if (toastId !== null) {
+        dismissToast(toastId);
+      }
+
+      handleSuccess(
+        'Feature updated successfully',
+        `"${form.name}" has been updated`
+      );
+
+      router.push('/staff/feature');
+      router.refresh();
+    } catch (err) {
+      if (toastId !== null) {
+        dismissToast(toastId);
+      }
+
+      handleError(err, 'Update feature failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

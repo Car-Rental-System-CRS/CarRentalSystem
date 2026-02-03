@@ -1,12 +1,25 @@
 'use client';
 
-import { use, useState } from 'react';
-import { useRouter, notFound } from 'next/navigation';
-import { brands } from '@/data/brands';
+import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import EditHeader from './components/EditHeader';
 import EditBrandForm from './components/EditBrandForm';
 import OriginalValues from './components/OriginalValues';
+
+import { CarBrand } from '@/types/brand';
+import { carBrandService } from '@/services/brandService';
+
+import {
+  handleError,
+  handleSuccess,
+  showLoading,
+  dismissToast,
+} from '@/lib/errorHandler';
+
+type FormState = {
+  name: string;
+};
 
 export default function EditBrandPage({
   params,
@@ -16,28 +29,63 @@ export default function EditBrandPage({
   const { id } = use(params);
   const router = useRouter();
 
-  const brand = brands.find((b) => b.id === Number(id));
-  if (!brand) return notFound();
-
+  const [brand, setBrand] = useState<CarBrand | null>(null);
+  const [form, setForm] = useState<FormState>({ name: '' });
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    name: brand.name,
-  });
+  /* ---------- FETCH BRAND ---------- */
+  useEffect(() => {
+    const fetchBrand = async () => {
+      try {
+        const res = await carBrandService.getById(id);
+        const data = res.data.data;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+        setBrand(data);
+        setForm({ name: data.name });
+      } catch (err) {
+        handleError(err, 'Failed to load brand');
+        router.push('/404');
+      }
+    };
+
+    fetchBrand();
+  }, [id, router]);
+
+  if (!brand) return null;
+
+  /* ---------- UPDATE ---------- */
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
 
-    console.log('UPDATE BRAND', {
-      id: brand.id,
-      ...form,
-    });
+    let toastId: string | number | null = null;
 
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      setLoading(true);
 
-    router.push('/staff/brand');
-    router.refresh();
+      toastId = showLoading('Updating brand...');
+
+      await carBrandService.update(id, { name: form.name });
+
+      if (toastId !== null) {
+        dismissToast(toastId);
+      }
+
+      handleSuccess(
+        'Brand updated successfully',
+        `"${form.name}" has been updated`
+      );
+
+      router.push('/staff/brand');
+      router.refresh();
+    } catch (err) {
+      if (toastId !== null) {
+        dismissToast(toastId);
+      }
+
+      handleError(err, 'Update brand failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

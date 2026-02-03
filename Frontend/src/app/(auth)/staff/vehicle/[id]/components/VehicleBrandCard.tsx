@@ -3,7 +3,7 @@ export default function VehicleBrandCard({
   brandId,
 }: {
   brandName: string;
-  brandId: number;
+  brandId: string;
 }) {
   return (
     <div className="bg-white rounded-xl border p-6">

@@ -4,11 +4,9 @@ import { Button } from '@/components/ui/Button';
 
 export default function VehicleActionsCard({
   vehicleId,
-  quantity,
   onDelete,
 }: {
-  vehicleId: number;
-  quantity: number;
+  vehicleId: string;
   onDelete: () => void;
 }) {
   return (
@@ -19,7 +17,7 @@ export default function VehicleActionsCard({
         <Button asChild className="w-full justify-start">
           <Link href={`/staff/vehicle/${vehicleId}/unit`}>
             <Car className="w-4 h-4 mr-2" />
-            View Vehicle Units ({quantity})
+            View Vehicle Units
           </Link>
         </Button>
 

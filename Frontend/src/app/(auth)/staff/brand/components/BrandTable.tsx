@@ -9,32 +9,34 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Brand } from '@/data/brands';
+import { CarBrand } from '@/types/brand';
 
 type SortField = 'name';
 type SortDirection = 'asc' | 'desc';
 
 interface Props {
-  brands: Brand[];
+  brands: CarBrand[];
+  loading?: boolean;
   sortField: SortField;
   sortDirection: SortDirection;
   onSortChange: (field: SortField) => void;
-  onDelete: (brand: Brand) => void;
+  onDelete: (brand: CarBrand) => void;
 }
 
 export default function BrandTable({
   brands,
+  loading,
   sortField,
   sortDirection,
   onSortChange,
   onDelete,
 }: Props) {
-  const icon = () => {
-    if (sortDirection === 'asc') {
-      return <ChevronUp className="w-4 h-4 ml-1" />;
-    }
-    return <ChevronDown className="w-4 h-4 ml-1" />;
-  };
+  const icon = () =>
+    sortDirection === 'asc' ? (
+      <ChevronUp className="w-4 h-4 ml-1" />
+    ) : (
+      <ChevronDown className="w-4 h-4 ml-1" />
+    );
 
   return (
     <div className="bg-white border rounded-xl overflow-hidden">
@@ -82,7 +84,13 @@ export default function BrandTable({
         </tbody>
       </table>
 
-      {brands.length === 0 && (
+      {/* Loading */}
+      {loading && (
+        <div className="text-center py-8 text-gray-500">Loading...</div>
+      )}
+
+      {/* Empty */}
+      {!loading && brands.length === 0 && (
         <div className="text-center py-12 text-gray-500">No brands found</div>
       )}
     </div>
@@ -101,7 +109,7 @@ function Th({
       onClick={onClick}
       className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
     >
-      {children}
+      <div className="flex items-center">{children}</div>
     </th>
   );
 }
