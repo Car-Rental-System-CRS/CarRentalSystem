@@ -13,18 +13,12 @@ import java.util.UUID;
 @Repository
 public interface ModelFeatureRepository extends JpaRepository<ModelFeature, UUID> {
 
-    Page<ModelFeature> findByCarTypeId(UUID typeId, Pageable pageable); //Find all features for one type
+    Page<ModelFeature> findByCarType_Id(UUID typeId, Pageable pageable);
 
-    Page<ModelFeature> findByCarFeatureId(UUID featureId, Pageable pageable); //Find all types with one feature
+    Page<ModelFeature> findByCarFeature_Id(UUID featureId, Pageable pageable);
 
-    boolean existsByCarTypeIdAndCarFeatureId(UUID typeId, UUID featureId); //Prevent duplicate mapping
+    boolean existsByCarType_IdAndCarFeature_Id(UUID typeId, UUID featureId);
 
-    Optional<ModelFeature> findByCarTypeIdAndCarFeatureId(UUID typeId, UUID featureId); //Find one mapping
-
-    @Modifying
-    void deleteByCarTypeId(UUID typeId); //Bulk delete mappings
-
-    @Modifying
-    void deleteByCarTypeIdAndCarFeatureId(UUID typeId, UUID featureId); //Remove one feature from one type
+    Optional<ModelFeature> findByCarType_IdAndCarFeature_Id(UUID typeId, UUID featureId);
 
 }

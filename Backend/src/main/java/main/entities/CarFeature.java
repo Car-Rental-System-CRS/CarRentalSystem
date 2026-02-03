@@ -3,6 +3,8 @@ package main.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -22,4 +24,12 @@ public class CarFeature extends AuditableEntity{
 
     @Column(nullable = false)
     private String description;
+
+    @OneToMany(
+            mappedBy = "carFeature",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<ModelFeature> modelFeatures = new ArrayList<>();
+
 }

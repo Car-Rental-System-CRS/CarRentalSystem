@@ -2,6 +2,7 @@ package main.controllers;
 
 import lombok.RequiredArgsConstructor;
 import main.dtos.APIResponse;
+import main.dtos.request.ModelFeatureRequest;
 import main.dtos.response.ModelFeatureResponse;
 import main.services.ModelFeatureService;
 import org.springframework.data.domain.Page;
@@ -90,4 +91,59 @@ public class ModelFeatureController {
                         .build()
         );
     }
+
+    @PostMapping("/attach-bulk")
+    public ResponseEntity<APIResponse<Void>> attachBulk(
+            @RequestBody ModelFeatureRequest request) {
+
+        modelFeatureService.attachFeaturesBulk(
+                request.getTypeId(),
+                request.getFeatureIds()
+        );
+
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .success(true)
+                        .message("Features attached in bulk")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @PostMapping("/replace")
+    public ResponseEntity<APIResponse<Void>> replace(
+            @RequestBody ModelFeatureRequest request) {
+
+        modelFeatureService.replaceFeatures(
+                request.getTypeId(),
+                request.getFeatureIds()
+        );
+
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .success(true)
+                        .message("Features replaced")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @DeleteMapping("/detach-bulk")
+    public ResponseEntity<APIResponse<Void>> detachBulk(
+            @RequestBody ModelFeatureRequest request) {
+
+        modelFeatureService.detachFeaturesBulk(
+                request.getTypeId(),
+                request.getFeatureIds()
+        );
+
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .success(true)
+                        .message("Features detached in bulk")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
 }
