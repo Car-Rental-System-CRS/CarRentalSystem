@@ -1,33 +1,37 @@
-// src/services/modelFeatureService.ts
+import api from '@/lib/axios';
+import { APIResponse } from '@/types/api';
+import { PageResponse } from '@/types/modelFeature';
 
-import axios from '@/lib/axios';
+export interface ModelFeature {
+  id: string;
+  featureId: string;
+  featureName: string;
+  description?: string;
+}
 
 export const modelFeatureService = {
-  /* ===== ATTACH FEATURE TO TYPE ===== */
-  attach(typeId: string, featureId: string) {
-    return axios.post('/model-features/attach', null, {
-      params: { typeId, featureId },
-    });
+  /* ---------- GET FEATURES BY TYPE ---------- */
+  getByType(typeId: string, params?: { page?: number; size?: number }) {
+    return api.get<APIResponse<PageResponse<ModelFeature>>>(
+      `/api/model-features/by-type/${typeId}`,
+      { params }
+    );
   },
 
-  /* ===== REMOVE FEATURE FROM TYPE ===== */
-  detach(typeId: string, featureId: string) {
-    return axios.delete('/model-features/detach', {
-      params: { typeId, featureId },
-    });
+  /* ---------- ATTACH ---------- */
+  attachBulk(payload: { typeId: string; featureIds: string[] }) {
+    return api.post('/api/model-features/attach-bulk', payload);
   },
 
-  /* ===== GET FEATURES OF A TYPE ===== */
-  getByType(typeId: string, page = 0, size = 10) {
-    return axios.get(`/model-features/by-type/${typeId}`, {
-      params: { page, size },
-    });
+  /* ---------- REPLACE ---------- */
+  replace(payload: { typeId: string; featureIds: string[] }) {
+    return api.post('/api/model-features/replace', payload);
   },
 
-  /* ===== GET TYPES HAVING FEATURE ===== */
-  getByFeature(featureId: string, page = 0, size = 10) {
-    return axios.get(`/model-features/by-feature/${featureId}`, {
-      params: { page, size },
+  /* ---------- DETACH ---------- */
+  detachBulk(payload: { typeId: string; featureIds: string[] }) {
+    return api.delete('/api/model-features/detach-bulk', {
+      data: payload, // 👈 REQUIRED for DELETE body
     });
   },
 };

@@ -83,6 +83,7 @@ export default function CarsPage() {
     setLoading(true);
     try {
       const res = await carService.getAll({
+        typeId, // ✅ FILTER BY TYPE
         licensePlate: licensePlate || undefined,
         importFrom,
         importTo,
