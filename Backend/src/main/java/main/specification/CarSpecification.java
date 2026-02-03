@@ -4,6 +4,7 @@ import main.entities.Car;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 public class CarSpecification {
 
@@ -36,6 +37,17 @@ public class CarSpecification {
             return cb.lessThanOrEqualTo(
                     root.get("importDate"),
                     to
+            );
+        };
+    }
+
+    public static Specification<Car> getTypeId(UUID typeId) {
+        return (root, query, cb) -> {
+            if (typeId == null) return null;
+
+            return cb.equal(
+                    root.get("carType").get("id"),
+                    typeId
             );
         };
     }
