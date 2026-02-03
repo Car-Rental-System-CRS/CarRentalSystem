@@ -3,7 +3,7 @@
 export interface Car {
   id: string;
   licensePlate: string;
-  importDate: string; // ISO date string
+  importDate: string;
   carTypeId: string;
   carTypeName: string;
 }

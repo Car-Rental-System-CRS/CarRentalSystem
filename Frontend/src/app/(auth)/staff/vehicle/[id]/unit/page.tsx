@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams, notFound } from 'next/navigation';
 
 import {
   handleError,
@@ -18,18 +19,26 @@ import CarTable from './components/VehicleUnitsTable';
 import CarStats from './components/VehicleStats';
 
 import { carService } from '@/services/carService';
+import { carTypeService } from '@/services/carTypeService';
+
 import { Car } from '@/types/car';
+import { CarType } from '@/types/carType';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function CarsPage() {
-  /* ---------- DATA ---------- */
+  /* ---------- PARAMS ---------- */
+  const { id } = useParams<{ id: string }>();
+  const typeId = id;
+
+  /* ---------- STATE ---------- */
+  const [carType, setCarType] = useState<CarType | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  /* ---------- FILTERS (MATCH BE) ---------- */
+  /* ---------- FILTERS ---------- */
   const [licensePlate, setLicensePlate] = useState('');
   const [importFrom, setImportFrom] = useState<string | undefined>();
   const [importTo, setImportTo] = useState<string | undefined>();
@@ -40,16 +49,37 @@ export default function CarsPage() {
     id: string;
     name: string;
   } | null>(null);
-
   const [isDeleting, setIsDeleting] = useState(false);
 
-  /* ---------- RESET PAGE WHEN FILTER CHANGES ---------- */
+  /* ---------- FETCH CAR TYPE ---------- */
+  useEffect(() => {
+    if (!typeId) return;
+
+    const fetchCarType = async () => {
+      try {
+        setLoading(true);
+        const res = await carTypeService.getById(typeId);
+        setCarType(res.data.data);
+      } catch (error) {
+        console.error(error);
+        notFound();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCarType();
+  }, [typeId]);
+
+  /* ---------- RESET PAGE ON FILTER CHANGE ---------- */
   useEffect(() => {
     setCurrentPage(1);
   }, [licensePlate, importFrom, importTo]);
 
-  /* ---------- FETCH FROM BE ---------- */
+  /* ---------- FETCH CARS ---------- */
   const fetchCars = async () => {
+    if (!typeId) return;
+
     setLoading(true);
     try {
       const res = await carService.getAll({
@@ -59,7 +89,7 @@ export default function CarsPage() {
         page: currentPage - 1,
         size: ITEMS_PER_PAGE,
       });
-      console.log('RAW RESPONSE:', res.data);
+
       const page = res.data.data;
 
       setCars(page.items);
@@ -72,7 +102,7 @@ export default function CarsPage() {
 
   useEffect(() => {
     fetchCars();
-  }, [licensePlate, importFrom, importTo, currentPage]);
+  }, [typeId, licensePlate, importFrom, importTo, currentPage]);
 
   /* ---------- DELETE ---------- */
   const handleDelete = async () => {
@@ -83,7 +113,6 @@ export default function CarsPage() {
 
     try {
       await carService.delete(confirm.id);
-
       handleSuccess('Car deleted', `"${confirm.name}" has been deleted`);
       await fetchCars();
     } catch (error) {
@@ -98,7 +127,8 @@ export default function CarsPage() {
   /* ---------- RENDER ---------- */
   return (
     <div className="p-8 space-y-6">
-      <CarHeader total={total} />
+      <CarHeader total={total} typeId={typeId} typeName={carType?.name} />
+
       <CarStats total={total} />
 
       <CarFilters
