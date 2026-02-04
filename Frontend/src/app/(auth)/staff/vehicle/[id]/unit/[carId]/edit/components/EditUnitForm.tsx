@@ -1,4 +1,4 @@
-import { Car, Calendar, Navigation, Save } from 'lucide-react';
+import { Car, Calendar, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/Label';
 type FormState = {
   license: string;
   importDate: string;
-  gpsId: string;
 };
 
 interface Props {
@@ -49,13 +48,6 @@ export default function EditUnitForm({
               onChange((p) => ({ ...p, importDate: e.target.value }))
             }
             required
-          />
-        </Field>
-
-        <Field label="GPS Device ID" icon={<Navigation />}>
-          <Input
-            value={form.gpsId}
-            onChange={(e) => onChange((p) => ({ ...p, gpsId: e.target.value }))}
           />
         </Field>
 

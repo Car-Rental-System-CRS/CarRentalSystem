@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,7 +29,7 @@ public class ModelFeatureServiceImpl implements ModelFeatureService {
     // ===== ATTACH =====
     @Override
     public void attachFeatureToType(UUID typeId, UUID featureId) {
-        if (modelFeatureRepository.existsByCarTypeIdAndCarFeatureId(typeId, featureId)) {
+        if (modelFeatureRepository.existsByCarType_IdAndCarFeature_Id(typeId, featureId)) {
             throw new IllegalArgumentException("Feature already attached to this car type");
         }
 
@@ -40,26 +41,76 @@ public class ModelFeatureServiceImpl implements ModelFeatureService {
 
         ModelFeature entity = ModelFeatureMapper.toEntity(type, feature);
 
-        modelFeatureRepository.save(entity);
+        type.getModelFeatures().add(entity);
     }
 
     // ===== REMOVE =====
-    @Transactional
     @Override
+    @Transactional
     public void removeFeatureFromType(UUID typeId, UUID featureId) {
 
-        ModelFeature mapping = modelFeatureRepository
-                .findByCarTypeIdAndCarFeatureId(typeId, featureId)
-                .orElseThrow(() -> new IllegalArgumentException("Mapping does not exist"));
+        CarType type = carTypeRepository.findById(typeId)
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found"));
 
-        modelFeatureRepository.delete(mapping);
+        boolean removed = type.getModelFeatures()
+                .removeIf(mf -> mf.getCarFeature().getId().equals(featureId));
+
+        if (!removed) {
+            throw new IllegalArgumentException("Mapping does not exist");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void attachFeaturesBulk(UUID typeId, List<UUID> featureIds) {
+
+        CarType type = carTypeRepository.findById(typeId)
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found"));
+
+        var features = carFeatureRepository.findAllById(featureIds);
+
+        if (features.size() != featureIds.size()) {
+            throw new IllegalArgumentException("Some features not found");
+        }
+
+        features.stream()
+                .filter(f -> !modelFeatureRepository
+                        .existsByCarType_IdAndCarFeature_Id(typeId, f.getId()))
+                .map(f -> ModelFeatureMapper.toEntity(type, f))
+                .forEach(type.getModelFeatures()::add);
+    }
+
+    @Override
+    @Transactional
+    public void replaceFeatures(UUID typeId, List<UUID> featureIds) {
+
+        CarType type = carTypeRepository.findById(typeId)
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found"));
+
+        // cascade delete join rows
+        type.getModelFeatures().clear();
+
+        attachFeaturesBulk(typeId, featureIds);
+    }
+
+    @Override
+    @Transactional
+    public void detachFeaturesBulk(UUID typeId, List<UUID> featureIds) {
+
+        CarType type = carTypeRepository.findById(typeId)
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found"));
+
+        type.getModelFeatures()
+                .removeIf(mf -> featureIds.contains(
+                        mf.getCarFeature().getId()
+                ));
     }
 
     // ===== PAGE FEATURES OF TYPE =====
     @Override
     public Page<ModelFeatureResponse> getByType(UUID typeId, Pageable pageable) {
         return modelFeatureRepository
-                .findByCarTypeId(typeId, pageable)
+                .findByCarType_Id(typeId, pageable)
                 .map(ModelFeatureMapper::toResponse);
     }
 
@@ -67,7 +118,7 @@ public class ModelFeatureServiceImpl implements ModelFeatureService {
     @Override
     public Page<ModelFeatureResponse> getByFeature(UUID featureId, Pageable pageable) {
         return modelFeatureRepository
-                .findByCarFeatureId(featureId, pageable)
+                .findByCarFeature_Id(featureId, pageable)
                 .map(ModelFeatureMapper::toResponse);
     }
 }
