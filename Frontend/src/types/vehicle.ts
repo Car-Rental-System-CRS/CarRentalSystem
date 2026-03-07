@@ -1,3 +1,5 @@
+import { CartItem } from './booking';
+
 export interface VehicleUnit {
   carId: string;
   license: string;
@@ -29,16 +31,17 @@ export interface BookingItem {
   startDate: Date;
   endDate: Date;
   totalDays: number;
+  totalHours?: number;
   totalPrice: number;
   image?: string;
 }
 
 export interface BookingContextType {
-  bookingItems: BookingItem[];
-  addToBooking: (vehicle: VehicleModel, startDate: Date, endDate: Date, quantity: number) => void;
-  removeFromBooking: (vehicleId: string) => void;
-  updateBookingQuantity: (vehicleId: string, quantity: number) => void;
-  clearBooking: () => void;
+  cartItems: CartItem[];
+  addToCart: (item: Omit<CartItem, 'id'>) => boolean;
+  removeFromCart: (cartItemId: string) => void;
+  getCartItem: (carTypeId: string, pickupDateTime: Date, returnDateTime: Date) => CartItem | undefined;
+  clearCart: () => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
 }

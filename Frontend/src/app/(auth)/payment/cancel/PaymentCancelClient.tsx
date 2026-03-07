@@ -200,7 +200,7 @@ export default function PaymentCancelClient() {
                 Back to Home
               </Button>
             </Link>
-            <Link href="/profile/bookings">
+            <Link href={`/bookings/${booking?.id || ''}`}>
               <Button variant="outline" size="lg" className="w-full">
                 View My Bookings
               </Button>

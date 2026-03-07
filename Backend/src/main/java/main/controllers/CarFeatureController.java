@@ -19,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +33,7 @@ public class CarFeatureController {
     private final CarFeatureService carFeatureService;
 
     @PostMapping
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_FEATURE_CREATE')")
     public ResponseEntity<APIResponse<CarFeatureResponse>> create(@RequestBody CreateCarFeatureRequest request) {
         CarFeatureResponse data = carFeatureService.createFeature(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -84,6 +87,7 @@ public class CarFeatureController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_FEATURE_EDIT')")
     public ResponseEntity<APIResponse<CarFeatureResponse>> update(
             @PathVariable UUID id,
             @RequestBody CreateCarFeatureRequest request) {
@@ -99,6 +103,7 @@ public class CarFeatureController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_FEATURE_DELETE')")
     public ResponseEntity<APIResponse<Void>> delete(@PathVariable UUID id) {
         carFeatureService.deleteFeature(id);
         return ResponseEntity.ok(

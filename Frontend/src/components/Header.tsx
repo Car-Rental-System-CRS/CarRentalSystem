@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Car, Menu, X, User, LogOut } from 'lucide-react';
+import { Car, Menu, X, User, LogOut, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -123,6 +123,14 @@ export default function Header() {
                       >
                         <User className="w-4 h-4" />
                         <span>Profile</span>
+                      </Link>
+                      <Link
+                        href="/bookings"
+                        className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>My Bookings</span>
                       </Link>
                       <button
                         onClick={() => {
@@ -246,6 +254,22 @@ export default function Header() {
                     >
                       <User className="w-5 h-5" />
                       Profile
+                    </Link>
+                  </Button>
+
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="w-full h-14 text-lg font-medium border-2 border-gray-300"
+                  >
+                    <Link
+                      href="/bookings"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="w-5 h-5" />
+                      My Bookings
                     </Link>
                   </Button>
 

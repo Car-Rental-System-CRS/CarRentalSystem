@@ -38,6 +38,17 @@ export interface Feature {
   description?: string;
 }
 
+export interface CarAvailabilityResponse {
+  carTypeId: string;
+  carTypeName: string;
+  totalCount: number;
+  availableCount: number;
+  pricePerHour: number;
+  pricePerDay: number;
+  pickupDateTime: string;
+  returnDateTime: string;
+}
+
 export interface CarType {
   id: string;
   name: string;
@@ -82,6 +93,23 @@ export const carTypeApi = {
   getById: async (id: string) => {
     const response = await axiosInstance.get<APIResponse<CarType>>(`/api/car-types/${id}`);
     return response.data;
+  },
+
+  checkAvailability: async (
+    carTypeId: string,
+    pickupDateTime: Date,
+    returnDateTime: Date
+  ): Promise<CarAvailabilityResponse> => {
+    const response = await axiosInstance.get<APIResponse<CarAvailabilityResponse>>(
+      `/api/car-types/${carTypeId}/availability`,
+      {
+        params: {
+          pickupDateTime: pickupDateTime.toISOString(),
+          returnDateTime: returnDateTime.toISOString(),
+        },
+      }
+    );
+    return response.data.data;
   },
 };
 

@@ -1,27 +1,26 @@
 package main.services.impl;
 
-import lombok.RequiredArgsConstructor;
-import main.entities.PaymentTransaction;
-import main.enums.BookingStatus;
-import main.enums.PaymentStatus;
-import main.repositories.PaymentTransactionRepository;
-import main.services.PayosService;
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
+import lombok.RequiredArgsConstructor;
+import main.entities.Booking;
+import main.entities.PaymentTransaction;
+import main.enums.BookingStatus;
+import main.enums.PaymentPurpose;
+import main.enums.PaymentStatus;
+import main.repositories.PaymentTransactionRepository;
+import main.services.PayosService;
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 import vn.payos.model.webhooks.Webhook;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -65,13 +64,6 @@ public class PayosServiceImpl implements PayosService {
         }
     }
 
-    @Override
-    public String getPaymentLink(long payosOrderCode) {
-        throw new UnsupportedOperationException(
-                "PayOS does not support getting payment link by order code. Store checkoutUrl in DB or just create new links."
-        );
-    }
-
 
     @Override
     @Transactional
@@ -98,9 +90,25 @@ public class PayosServiceImpl implements PayosService {
             }
 
             transaction.setStatus(PaymentStatus.PAID);
-            transaction.getBooking().setStatus(BookingStatus.CONFIRMED);
+
+            Booking booking = transaction.getBooking();
+            PaymentPurpose purpose = transaction.getPurpose();
+
+            if (purpose == PaymentPurpose.BOOKING_PAYMENT) {
+                // Deposit payment — move CREATED → CONFIRMED
+                if (booking.getStatus() == BookingStatus.CREATED) {
+                    booking.setStatus(BookingStatus.CONFIRMED);
+                }
+            } else if (purpose == PaymentPurpose.OVERDUE_PAYMENT) {
+                // Overdue payment — check if all pending payments are now paid, then COMPLETED
+                boolean allPaid = booking.getPaymentTransactions().stream()
+                        .allMatch(tx -> tx.getStatus() == PaymentStatus.PAID);
+                if (allPaid) {
+                    booking.setStatus(BookingStatus.COMPLETED);
+                }
+            }
+
             paymentTransactionRepository.save(transaction);
-            //TODO: mark booking status to enum = CONFIRMED if is still enum = CREATED. If enum = CANCELLED (payment too late) then will perform to return money back according to business rule
 
             System.out.println("Thanh toán thành công: " + orderCode);
             return ResponseEntity.ok("OK");

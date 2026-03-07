@@ -1,0 +1,124 @@
+@startuml Booking Sequence Diagram
+
+title Booking Sequence Diagram
+
+actor "Renter" as Renter
+participant ":Vehicle" as V
+participant ":Cart" as C
+participant ":Booking" as B
+participant ":Transaction" as T
+participant ":Payment Gateway" as PG
+
+' ── 1. Browse & Check Availability ──
+Renter -> V : 1. View vehicle details
+activate V
+V --> Renter : 1.1 Display vehicle info\n(name, price, seats, images)
+deactivate V
+
+Renter -> V : 2. Select pickup & return date+time
+activate V
+V -> V : 2.1 Validate minimum 5-hour rental
+V -> V : 2.2 Check availability\n(apply 1-day IDAER buffer)
+V --> Renter : 2.3 Show available count,\nquantity selector, pricing
+deactivate V
+
+' ── 2. Add to Cart ──
+Renter -> V : 3. Select quantity & click "Add to Cart"
+activate V
+V -> C : 3.1 addToCart(carType, quantity, dates, pricing)
+activate C
+C -> C : 3.2 Validate (no duplicate, min 5h)
+C -> C : 3.3 Save to cart
+C --> V : 3.4 Confirmation
+deactivate C
+V --> Renter : 3.5 "Added to cart"
+deactivate V
+
+' ── 3. Cart & Checkout ──
+Renter -> C : 4. Open Cart
+activate C
+C --> Renter : 4.1 Show cart items
+deactivate C
+
+Renter -> C : 5. Click "Checkout" on a cart item
+activate C
+C --> Renter : 5.1 Checkout page\n(summary, deposit = 30%, payment options)
+deactivate C
+
+' ── 4. Create Booking ──
+alt [Pay Now]
+    Renter -> B : 6. Confirm booking (payNow = true)
+    activate B
+    B -> B : 6.1 Validate dates & availability
+    B -> B : 6.2 Auto-assign cars
+    B -> B : 6.3 Calculate price\n(deposit = 30%)
+
+    alt [Not enough cars]
+        B --> Renter : 6.4a Error: not enough cars
+    else [Success]
+        B -> T : 6.4b createPayment(bookingId,\nBOOKING_PAYMENT, deposit)
+        activate T
+        T -> PG : 6.5 createPaymentLink(orderCode, amount)
+        activate PG
+        PG --> T : 6.6 checkoutUrl
+        deactivate PG
+        T --> B : 6.7 PaymentTransactionResponse
+        deactivate T
+        B --> Renter : 6.8 BookingResponse\n(status=CREATED, paymentUrl)
+        deactivate B
+
+        Renter -> PG : 7. Complete deposit payment
+        activate PG
+        PG -> T : 7.1 Webhook (orderCode, PAID)
+        activate T
+        T -> T : 7.2 Mark payment PAID
+        T -> B : 7.3 Update booking status
+        activate B
+        B -> B : 7.4 CREATED → CONFIRMED
+        deactivate B
+        deactivate T
+        PG --> Renter : 7.5 Redirect to success page
+        deactivate PG
+    end
+
+else [Pay Later]
+    Renter -> B : 6. Confirm booking (payNow = false)
+    activate B
+    B -> B : 6.1 Validate dates & availability
+    B -> B : 6.2 Auto-assign cars
+    B -> B : 6.3 Calculate price\n(deposit = 30%)
+    B --> Renter : 6.4 BookingResponse\n(status=CREATED, no payment)
+    deactivate B
+
+    ...Renter decides to pay later...
+
+    Renter -> T : 7. Request deposit payment
+    activate T
+    T -> PG : 7.1 createPaymentLink(orderCode, amount)
+    activate PG
+    PG --> T : 7.2 checkoutUrl
+    deactivate PG
+    T --> Renter : 7.3 paymentUrl
+    deactivate T
+
+    Renter -> PG : 8. Complete deposit payment
+    activate PG
+    PG -> T : 8.1 Webhook (orderCode, PAID)
+    activate T
+    T -> T : 8.2 Mark payment PAID
+    T -> B : 8.3 Update booking status
+    activate B
+    B -> B : 8.4 CREATED → CONFIRMED
+    deactivate B
+    deactivate T
+    PG --> Renter : 8.5 Redirect to success page
+    deactivate PG
+end
+
+note across
+  Booking is now **CONFIRMED**.
+  Renter has paid 30% deposit. Cars are assigned.
+  Continues in **Trip Management** Sequence Diagram.
+end note
+
+@enduml

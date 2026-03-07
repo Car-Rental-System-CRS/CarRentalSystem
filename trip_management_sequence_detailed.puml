@@ -1,0 +1,139 @@
+@startuml Trip Management Sequence Diagram (Detailed)
+
+title Trip Management Sequence Diagram (By Page & Service)
+
+actor ":Staff" as Staff
+actor ":Renter" as Renter
+participant ":StaffBookingDetailPage" as SBD
+participant ":RenterBookingPage" as RBP
+participant ":SuccessPage" as SP
+participant ":BookingService" as BS
+participant ":PaymentTransactionService" as PTS
+participant ":PayosService" as PS
+participant ":Payment Gateway" as PAYOS
+
+note across
+  **Precondition:** Booking is **CONFIRMED**.
+  Deposit paid, cars assigned.
+  Continues from Booking Sequence Diagram.
+end note
+
+' ── 1. Staff Views Booking ──
+Staff -> SBD : 1. View booking (CONFIRMED)
+activate SBD
+SBD -> BS : 1.1 getAdminBookingById(bookingId)
+activate BS
+BS --> SBD : 1.2 AdminBookingResponse
+deactivate BS
+SBD --> Staff : 1.3 Display booking detail page
+deactivate SBD
+
+' ── 2. Staff Confirms Pickup ──
+Staff -> SBD : 2. Click "Confirm Pickup"
+activate SBD
+SBD -> BS : 2.1 confirmPickup(bookingId)
+activate BS
+note right of BS
+  Validate status == CONFIRMED.
+  Set actualReceiveDate = now().
+  CONFIRMED → **IN_PROGRESS**.
+end note
+BS --> SBD : 2.2 AdminBookingResponse (IN_PROGRESS)
+deactivate BS
+SBD --> Staff : 2.3 Success notification
+deactivate SBD
+
+' ── GPS Tracking ──
+note over SBD
+  **GPS Tracking (client-side emulation)**
+  Leaflet.js + OpenStreetMap.
+  Simulated car movement every 3s.
+  No backend calls.
+end note
+
+' ── 3. Staff Confirms Return ──
+Staff -> SBD : 3. Click "Confirm Return"
+activate SBD
+SBD -> BS : 3.1 confirmReturn(bookingId)
+activate BS
+note right of BS
+  Validate status == IN_PROGRESS.
+  Set actualReturnDate = now().
+  Compare actual vs expected return.
+end note
+
+alt On time or early
+    BS -> BS : 3.2a Set status → COMPLETED
+    BS --> SBD : 3.3a AdminBookingResponse (COMPLETED)
+    deactivate BS
+    SBD --> Staff : 3.4a "Booking Complete" banner
+    deactivate SBD
+
+else Late return — overdue
+    note right of BS
+      Calculate overdue charge:
+      ceil(overdueHours) × hourlyRate × 1.5.
+      Update totalPrice & remainingAmount.
+      Keep status = IN_PROGRESS.
+    end note
+    BS -> PTS : 3.2b createPayment(bookingId,\nOVERDUE_PAYMENT, overdueCharge)
+    activate PTS
+    PTS -> PAYOS : 3.3b createPaymentLink(orderCode, amount)
+    activate PAYOS
+    PAYOS --> PTS : 3.4b checkoutUrl
+    deactivate PAYOS
+    PTS --> BS : 3.5b PaymentTransactionResponse
+    deactivate PTS
+    BS --> SBD : 3.6b AdminBookingResponse\n(IN_PROGRESS, overdueCharge)
+    deactivate BS
+    SBD --> Staff : 3.7b Overdue alert + pending payment
+    deactivate SBD
+
+    ' ── 4. Renter Pays Overdue ──
+    Renter -> RBP : 4. View booking, click "Pay Now"
+    activate RBP
+    RBP -> PAYOS : 4.1 Redirect to payment checkout
+    deactivate RBP
+
+    Renter -> PAYOS : 5. Complete overdue payment
+    activate PAYOS
+    PAYOS -> PS : 5.1 handleWebhook(orderCode, PAID)
+    activate PS
+    note right of PS
+      OVERDUE_PAYMENT → PAID.
+      All payments resolved →
+      IN_PROGRESS → **COMPLETED**.
+    end note
+    deactivate PS
+    PAYOS --> SP : 5.2 Redirect to success page
+    deactivate PAYOS
+    activate SP
+    SP --> Renter : 5.3 Payment success
+    deactivate SP
+end
+
+' ── 6. Booking Complete ──
+Staff -> SBD : 6. View booking
+activate SBD
+SBD -> BS : 6.1 getAdminBookingById(bookingId)
+activate BS
+BS --> SBD : 6.2 AdminBookingResponse (COMPLETED)
+deactivate BS
+SBD --> Staff : 6.3 "Booking Complete" (no further actions)
+deactivate SBD
+
+Renter -> RBP : 7. View booking
+activate RBP
+RBP -> BS : 7.1 getBookingById(bookingId)
+activate BS
+BS --> RBP : 7.2 BookingResponse (COMPLETED)
+deactivate BS
+RBP --> Renter : 7.3 Booking completed, all payments resolved
+deactivate RBP
+
+note across
+  **Final Status: COMPLETED.**
+  All payments settled. Booking lifecycle ends.
+end note
+
+@enduml

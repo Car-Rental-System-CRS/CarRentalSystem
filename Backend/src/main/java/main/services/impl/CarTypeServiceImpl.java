@@ -1,18 +1,11 @@
 package main.services.impl;
 
-import lombok.RequiredArgsConstructor;
-import main.dtos.request.CreateCarTypeRequest;
-import main.dtos.response.CarTypeResponse;
-import main.entities.CarBrand;
-import main.entities.CarType;
-import main.entities.MediaFile;
-import main.entities.ModelFeature;
-import main.mappers.CarTypeMapper;
-import main.repositories.CarBrandRepository;
-import main.repositories.CarTypeRepository;
-import main.repositories.ModelFeatureRepository;
-import main.services.CarTypeService;
-import main.services.MediaFileService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -21,22 +14,47 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import main.dtos.request.CreateCarTypeRequest;
+import main.dtos.response.CarAvailabilityResponse;
+import main.dtos.response.CarTypeResponse;
+import main.entities.Car;
+import main.entities.CarBrand;
+import main.entities.CarType;
+import main.entities.MediaFile;
+import main.entities.ModelFeature;
+import main.enums.BookingStatus;
+import main.mappers.CarTypeMapper;
+import main.repositories.BookingCarRepository;
+import main.repositories.CarBrandRepository;
+import main.repositories.CarRepository;
+import main.repositories.CarTypeRepository;
+import main.repositories.ModelFeatureRepository;
+import main.services.CarTypeService;
+import main.services.MediaFileService;
 
 @Service
 @RequiredArgsConstructor
 public class CarTypeServiceImpl implements CarTypeService {
     private final CarTypeRepository carTypeRepository;
     private final CarBrandRepository carBrandRepository;
+    private final CarRepository carRepository;
+    private final BookingCarRepository bookingCarRepository;
     private final MediaFileService mediaFileService;
     private final ModelFeatureRepository modelFeatureRepository;
     private final CarTypeMapper carTypeMapper;
+    
+    // Business rule: Invalid Days After Each Rental (buffer period)
+    private static final int IDAER = 1;
+    private static final List<BookingStatus> BLOCKING_STATUSES = List.of(
+            BookingStatus.CREATED,
+            BookingStatus.CONFIRMED,
+            BookingStatus.IN_PROGRESS
+    );
 
     @Override
     @Transactional
-    public CarTypeResponse createType(CreateCarTypeRequest request, MultipartFile[] images) {
+    public CarTypeResponse createType(CreateCarTypeRequest request, MultipartFile[] images, String[] imageDescriptions) {
 
         CarBrand brand = carBrandRepository.findById(request.getBrandId())
                 .orElseThrow(() ->
@@ -48,14 +66,20 @@ public class CarTypeServiceImpl implements CarTypeService {
 
         if (images != null && images.length > 0) {
             for (int i = 0; i < images.length; i++) {
-                mediaFileService.uploadMediaFile(saved.getId(), images[i], null, i);
+                String description = (imageDescriptions != null && i < imageDescriptions.length) 
+                    ? imageDescriptions[i] : null;
+                
+                // Log for debugging
+                System.out.println("Processing image " + i + " with description: " + description);
+                
+                mediaFileService.uploadMediaFile(saved.getId(), images[i], description, i);
             }
         }
 
         CarType refreshed = carTypeRepository.findById(saved.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Car type not found after save"));
         List<ModelFeature> modelFeatures = modelFeatureRepository
-                .findByCarTypeId(saved.getId(), Pageable.unpaged())
+                .findByCarType_Id(saved.getId(), Pageable.unpaged())
                 .getContent();
         
         return carTypeMapper.toResponseWithFeatures(refreshed, modelFeatures);
@@ -68,7 +92,7 @@ public class CarTypeServiceImpl implements CarTypeService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Car type not found: " + id));
 
-        List<ModelFeature> modelFeatures = modelFeatureRepository.findByCarTypeId(id, Pageable.unpaged()).getContent();
+        List<ModelFeature> modelFeatures = modelFeatureRepository.findByCarType_Id(id, Pageable.unpaged()).getContent();
         
         return carTypeMapper.toResponseWithFeatures(entity, modelFeatures);
     }
@@ -83,7 +107,7 @@ public class CarTypeServiceImpl implements CarTypeService {
         List<CarTypeResponse> responses = carTypePage.getContent().stream()
                 .map(carType -> {
                     List<ModelFeature> modelFeatures = modelFeatureRepository
-                            .findByCarTypeId(carType.getId(), Pageable.unpaged())
+                            .findByCarType_Id(carType.getId(), Pageable.unpaged())
                             .getContent();
                     return carTypeMapper.toResponseWithFeatures(carType, modelFeatures);
                 })
@@ -95,7 +119,7 @@ public class CarTypeServiceImpl implements CarTypeService {
 
     @Override
     @Transactional
-    public CarTypeResponse updateType(UUID id, CreateCarTypeRequest request, MultipartFile[] images) {
+    public CarTypeResponse updateType(UUID id, CreateCarTypeRequest request, MultipartFile[] images, String[] imageDescriptions) {
 
         CarType entity = carTypeRepository.findById(id)
                 .orElseThrow(() ->
@@ -113,14 +137,16 @@ public class CarTypeServiceImpl implements CarTypeService {
             int startOrder = existingMedia.isEmpty() ? 0 : existingMedia.size();
             
             for (int i = 0; i < images.length; i++) {
-                mediaFileService.uploadMediaFile(saved.getId(), images[i], null, startOrder + i);
+                String description = (imageDescriptions != null && i < imageDescriptions.length) 
+                    ? imageDescriptions[i] : null;
+                mediaFileService.uploadMediaFile(saved.getId(), images[i], description, startOrder + i);
             }
         }
 
         CarType refreshed = carTypeRepository.findById(saved.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Car type not found after update"));
         List<ModelFeature> modelFeatures = modelFeatureRepository
-                .findByCarTypeId(saved.getId(), Pageable.unpaged())
+                .findByCarType_Id(saved.getId(), Pageable.unpaged())
                 .getContent();
         
         return carTypeMapper.toResponseWithFeatures(refreshed, modelFeatures);
@@ -141,9 +167,11 @@ public class CarTypeServiceImpl implements CarTypeService {
 
     @Override
     @Transactional
-    public CarTypeResponse addImagesToCarType(UUID carTypeId, MultipartFile[] images) {
-        CarType carType = carTypeRepository.findById(carTypeId)
-                .orElseThrow(() -> new IllegalArgumentException("Car type not found: " + carTypeId));
+    public CarTypeResponse addImagesToCarType(UUID carTypeId, MultipartFile[] images, String[] imageDescriptions) {
+        // Validate car type exists
+        if (!carTypeRepository.existsById(carTypeId)) {
+            throw new IllegalArgumentException("Car type not found: " + carTypeId);
+        }
 
         if (images == null || images.length == 0) {
             throw new IllegalArgumentException("No images provided");
@@ -153,13 +181,15 @@ public class CarTypeServiceImpl implements CarTypeService {
         int startOrder = existingMedia.isEmpty() ? 0 : existingMedia.size();
 
         for (int i = 0; i < images.length; i++) {
-            mediaFileService.uploadMediaFile(carTypeId, images[i], null, startOrder + i);
+            String description = (imageDescriptions != null && i < imageDescriptions.length) 
+                ? imageDescriptions[i] : null;
+            mediaFileService.uploadMediaFile(carTypeId, images[i], description, startOrder + i);
         }
 
         CarType refreshed = carTypeRepository.findById(carTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Car type not found after adding images"));
         List<ModelFeature> modelFeatures = modelFeatureRepository
-                .findByCarTypeId(carTypeId, Pageable.unpaged())
+                .findByCarType_Id(carTypeId, Pageable.unpaged())
                 .getContent();
         
         return carTypeMapper.toResponseWithFeatures(refreshed, modelFeatures);
@@ -169,5 +199,60 @@ public class CarTypeServiceImpl implements CarTypeService {
     @Transactional
     public void removeImageFromCarType(UUID imageId) {
         mediaFileService.deleteMediaFile(imageId);
+    }
+
+    @Override
+    public CarAvailabilityResponse checkAvailability(UUID carTypeId, LocalDateTime pickupDateTime, LocalDateTime returnDateTime) {
+        // Validate and get car type
+        CarType carType = carTypeRepository.findById(carTypeId)
+                .orElseThrow(() -> new IllegalArgumentException("Car type not found: " + carTypeId));
+        
+        String carTypeName = carType.getName();
+        BigDecimal pricePerHour = carType.getPrice();
+        BigDecimal pricePerDay = pricePerHour.multiply(BigDecimal.valueOf(24));
+        
+        // Get all cars for this car type
+        List<Car> allCars = carRepository.findByCarTypeId(carTypeId);
+        int totalCount = allCars.size();
+        
+        if (totalCount == 0) {
+            return CarAvailabilityResponse.builder()
+                    .carTypeId(carTypeId)
+                    .carTypeName(carTypeName)
+                    .totalCount(0)
+                    .availableCount(0)
+                    .pricePerHour(pricePerHour)
+                    .pricePerDay(pricePerDay)
+                    .pickupDateTime(pickupDateTime)
+                    .returnDateTime(returnDateTime)
+                    .build();
+        }
+        
+        // Apply IDAER buffer (1 day before and after)
+        LocalDateTime bufferedPickup = pickupDateTime.minusDays(IDAER);
+        LocalDateTime bufferedReturn = returnDateTime.plusDays(IDAER);
+        
+        // Find unavailable cars (booked with blocking statuses)
+        List<UUID> carIds = allCars.stream().map(Car::getId).toList();
+        List<UUID> unavailableCarIds = bookingCarRepository.findUnavailableCarIds(
+                carIds,
+                bufferedPickup,
+                bufferedReturn,
+                BLOCKING_STATUSES
+        );
+        
+        // Calculate available count
+        int availableCount = totalCount - unavailableCarIds.size();
+        
+        return CarAvailabilityResponse.builder()
+                .carTypeId(carTypeId)
+                .carTypeName(carTypeName)
+                .totalCount(totalCount)
+                .availableCount(Math.max(0, availableCount))
+                .pricePerHour(pricePerHour)
+                .pricePerDay(pricePerDay)
+                .pickupDateTime(pickupDateTime)
+                .returnDateTime(returnDateTime)
+                .build();
     }
 }

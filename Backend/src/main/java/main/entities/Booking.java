@@ -1,13 +1,29 @@
 package main.entities;
 
-import jakarta.persistence.*;
-import lombok.*;
-import main.enums.BookingStatus;
-
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import main.enums.BookingStatus;
 
 @Entity
 @AllArgsConstructor
@@ -31,9 +47,22 @@ public class Booking extends AuditableEntity {
 
     private BigDecimal totalPrice;
     private BigDecimal bookingPrice;
+    private BigDecimal depositAmount;
+    private BigDecimal remainingAmount;
+    private BigDecimal overdueCharge;
 
-    private LocalDate expectedReceiveDate;
-    private LocalDate expectedReturnDate;
+    private LocalDateTime actualReceiveDate;
+    private LocalDateTime actualReturnDate;
+    private LocalDateTime expectedReceiveDate;
+    private LocalDateTime expectedReturnDate;
+
+    // Booking cars
+    @OneToMany(
+            mappedBy = "booking",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<BookingCar> bookingCars;
 
     // Payment transactions
     @OneToMany(

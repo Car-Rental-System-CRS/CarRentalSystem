@@ -71,7 +71,7 @@ class PaymentTransactionServiceImplTest {
         when(paymentTransactionRepository.save(any(PaymentTransaction.class)))
                 .thenReturn(transaction);
 
-        when(payosService.createPaymentLink(anyLong(), eq(amount)))
+        when(payosService.createPaymentLink(anyLong(), eq(amount), eq(bookingId)))
                 .thenReturn(paymentUrl);
 
         when(paymentTransactionMapper.toPaymentTransactionResponse(transaction))
@@ -91,7 +91,7 @@ class PaymentTransactionServiceImplTest {
 
         verify(bookingRepository).findById(bookingId);
         verify(paymentTransactionRepository).save(any(PaymentTransaction.class));
-        verify(payosService).createPaymentLink(anyLong(), eq(amount));
+        verify(payosService).createPaymentLink(anyLong(), eq(amount), eq(bookingId));
     }
 }
 

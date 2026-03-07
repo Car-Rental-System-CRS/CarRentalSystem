@@ -1,12 +1,36 @@
 package main.repositories;
 
-import main.entities.Account;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import main.entities.Account;
+import main.enums.Role;
 
 public interface AccountRepository extends JpaRepository<Account, UUID> {
     Optional<Account> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    @Query("SELECT a FROM Account a WHERE " +
+           "(:search IS NULL OR LOWER(a.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(a.email) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:baseRole IS NULL OR a.role = :baseRole)")
+    Page<Account> findAllWithFilters(@Param("search") String search, @Param("baseRole") Role baseRole, Pageable pageable);
+
+    // Dashboard: user registrations by month within date range
+    @Query(value = "SELECT FORMAT(a.created_at, 'yyyy-MM') AS month, COUNT(*) AS cnt " +
+           "FROM accounts a " +
+           "WHERE a.role = 'USER' " +
+           "AND a.created_at >= :start AND a.created_at <= :end " +
+           "GROUP BY FORMAT(a.created_at, 'yyyy-MM') " +
+           "ORDER BY month", nativeQuery = true)
+    List<Object[]> countRegistrationsByMonthBetween(
+            @Param("start") java.time.Instant start,
+            @Param("end") java.time.Instant end
+    );
 }

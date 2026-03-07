@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { VehicleModel } from '@/types/vehicle';
-import { carTypeApi, carApi } from '@/services/vehicleService';
+import { carTypeApi, carApi, CarAvailabilityResponse } from '@/services/vehicleService';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { RentalPeriodPicker } from '@/components/ui/rental-period-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useBooking } from '@/contexts/BookingContext';
+import { useBooking, calculatePricing, MINIMUM_RENTAL_HOURS } from '@/contexts/BookingContext';
 import { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
 import {
   Users,
   Fuel,
@@ -25,10 +24,12 @@ import {
   Wrench,
   FileText,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useSessionStatus } from '@/components/SessionProvider';
+import { getServerUrl } from '@/lib/utils';
 
 interface VehicleDetailClientProps {
   vehicleId: string;
@@ -40,7 +41,10 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [quantity, setQuantity] = useState(1);
-  const { addToBooking } = useBooking();
+  const [availability, setAvailability] = useState<CarAvailabilityResponse | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const { addToCart } = useBooking();
   const { status } = useSessionStatus();
 
   useEffect(() => {
@@ -98,26 +102,155 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
     fetchVehicle();
   }, [vehicleId, router, status]);
 
-  const handleAddToBooking = () => {
-    if (!vehicle) return;
+  // Check availability when date range changes
+  const checkAvailability = useCallback(async () => {
+    if (!dateRange?.from || !dateRange?.to) {
+      setAvailability(null);
+      setAvailabilityError(null);
+      return;
+    }
+
+    try {
+      setCheckingAvailability(true);
+      setAvailabilityError(null);
+      
+      const response = await carTypeApi.checkAvailability(
+        vehicleId,
+        dateRange.from,
+        dateRange.to
+      );
+      
+      setAvailability(response);
+      
+      // Reset quantity if it exceeds available count
+      if (quantity > response.availableCount) {
+        setQuantity(Math.max(1, response.availableCount));
+      }
+      
+      if (response.availableCount === 0) {
+        setAvailabilityError('No vehicles available for the selected dates');
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      setAvailabilityError('Failed to check availability. Please try again.');
+      setAvailability(null);
+    } finally {
+      setCheckingAvailability(false);
+    }
+  }, [vehicleId, dateRange, quantity]);
+
+  useEffect(() => {
+    checkAvailability();
+  }, [checkAvailability]);
+
+  // Validate minimum rental period
+  const getValidationError = () => {
+    if (!dateRange?.from || !dateRange?.to) return null;
+    
+    const duration = dateRange.to.getTime() - dateRange.from.getTime();
+    const hours = duration / (1000 * 3600);
+    
+    if (hours < MINIMUM_RENTAL_HOURS) {
+      return `Minimum rental period is ${MINIMUM_RENTAL_HOURS} hours`;
+    }
+    
+    return null;
+  };
+
+  const handleAddToCart = () => {
+    if (!vehicle || !availability) return;
     
     if (!dateRange?.from || !dateRange?.to) {
       toast.error('Please select a date range');
       return;
     }
+    
+    const validationError = getValidationError();
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
 
-    addToBooking(vehicle, dateRange.from, dateRange.to, quantity);
+    if (availability.availableCount === 0) {
+      toast.error('No vehicles available for the selected dates');
+      return;
+    }
+
+    if (quantity > availability.availableCount) {
+      toast.error(`Only ${availability.availableCount} vehicles available`);
+      return;
+    }
+
+    const pricing = calculatePricing(
+      availability.pricePerHour,
+      dateRange.from,
+      dateRange.to,
+      quantity
+    );
+
+    const success = addToCart({
+      carTypeId: vehicle.id,
+      carTypeName: vehicle.carName,
+      pricePerHour: availability.pricePerHour,
+      pricePerDay: availability.pricePerDay,
+      quantity,
+      pickupDateTime: dateRange.from,
+      returnDateTime: dateRange.to,
+      ...pricing,
+      image: vehicle.image,
+    });
+    
+    if (success) {
+      // Optional: Reset form after adding
+      setDateRange(undefined);
+      setQuantity(1);
+      setAvailability(null);
+    }
   };
 
-  const calculateTotal = () => {
-    if (!vehicle || !dateRange?.from || !dateRange?.to) return 0;
-    const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 3600 * 24));
-    return vehicle.pricePerDay * days * quantity;
+  const getPricing = () => {
+    if (!availability || !dateRange?.from || !dateRange?.to) return null;
+    
+    return calculatePricing(
+      availability.pricePerHour,
+      dateRange.from,
+      dateRange.to,
+      quantity
+    );
   };
 
-  const getDays = () => {
-    if (!dateRange?.from || !dateRange?.to) return 0;
-    return Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 3600 * 24));
+  const getDuration = () => {
+    if (!dateRange?.from || !dateRange?.to) return { text: "0 days", minutes: 0, hours: 0, days: 0 };
+    
+    const duration = dateRange.to.getTime() - dateRange.from.getTime();
+    const minutes = Math.floor(duration / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      const remainingHours = hours % 24;
+      return { 
+        text: remainingHours > 0 ? `${days} day${days > 1 ? 's' : ''} ${remainingHours} hr${remainingHours > 1 ? 's' : ''}` : `${days} day${days > 1 ? 's' : ''}`,
+        minutes, 
+        hours, 
+        days 
+      };
+    } else if (hours > 0) {
+      const remainingMinutes = minutes % 60;
+      return { 
+        text: remainingMinutes > 0 ? `${hours} hr${hours > 1 ? 's' : ''} ${remainingMinutes} min` : `${hours} hr${hours > 1 ? 's' : ''}`,
+        minutes, 
+        hours, 
+        days 
+      };
+    } else {
+      return { 
+        text: `${minutes} minute${minutes > 1 ? 's' : ''}`,
+        minutes, 
+        hours, 
+        days 
+      };
+    }
   };
 
   if (loading) {
@@ -165,7 +298,7 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
           <Card className="overflow-hidden">
             {vehicle.image ? (
               <div className="aspect-[16/9] relative">
-                <img src={vehicle.image} alt={vehicle.carName} className="w-full h-full object-cover" />
+                <img src={getServerUrl() + vehicle.image} alt={vehicle.carName} className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className="aspect-[16/9] bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center">
@@ -185,7 +318,7 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
                 </div>
                 <div className="text-right">
                   <p className="text-4xl font-bold">${vehicle.pricePerDay}</p>
-                  <p className="text-sm text-muted-foreground">per day</p>
+                  <p className="text-sm text-muted-foreground">per hour</p>
                 </div>
               </div>
             </CardHeader>
@@ -348,21 +481,56 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
               <CardTitle>Book This Vehicle</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Date Range Picker */}
+              {/* Rental Period Picker */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Select Rental Period</label>
-                <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+                <RentalPeriodPicker dateRange={dateRange} onDateRangeChange={setDateRange} />
               </div>
+
+              {/* Availability Status */}
+              {dateRange?.from && dateRange?.to && (
+                <div className="border rounded-lg p-3">
+                  {checkingAvailability ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Checking availability...</span>
+                    </div>
+                  ) : availabilityError ? (
+                    <div className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm">{availabilityError}</span>
+                    </div>
+                  ) : availability ? (
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span className="text-sm">
+                        <span className="font-semibold text-green-600">{availability.availableCount}</span> of {availability.totalCount} vehicles available
+                      </span>
+                    </div>
+                  ) : null}
+                  
+                  {getValidationError() && (
+                    <div className="flex items-center gap-2 text-destructive mt-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm">{getValidationError()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Quantity Selector */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Quantity</label>
-                <Select value={quantity.toString()} onValueChange={(val) => setQuantity(parseInt(val))}>
+                <Select 
+                  value={quantity.toString()} 
+                  onValueChange={(val) => setQuantity(parseInt(val))}
+                  disabled={!availability || availability.availableCount === 0}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: vehicle.quantity }, (_, i) => i + 1).map((num) => (
+                    {Array.from({ length: availability?.availableCount || vehicle.quantity }, (_, i) => i + 1).map((num) => (
                       <SelectItem key={num} value={num.toString()}>
                         {num} {num === 1 ? 'vehicle' : 'vehicles'}
                       </SelectItem>
@@ -372,35 +540,63 @@ export default function VehicleDetailClient({ vehicleId }: VehicleDetailClientPr
               </div>
 
               {/* Pricing Summary */}
-              {dateRange?.from && dateRange?.to && (
+              {dateRange?.from && dateRange?.to && availability && !getValidationError() && (
                 <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Daily rate</span>
-                    <span>${vehicle.pricePerDay}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Number of days</span>
-                    <span>{getDays()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Quantity</span>
-                    <span>{quantity}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Total</span>
-                    <span>${calculateTotal().toFixed(2)}</span>
-                  </div>
+                  {(() => {
+                    const pricing = getPricing();
+                    if (!pricing) return null;
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Duration</span>
+                          <span>{getDuration().text}</span>
+                        </div>
+                        {pricing.totalDays > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Day rate ({pricing.totalDays} day{pricing.totalDays > 1 ? 's' : ''} × ${availability.pricePerDay})</span>
+                            <span>${(pricing.totalDays * availability.pricePerDay * quantity).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {pricing.remainingHours > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Hourly rate ({pricing.remainingHours} hr{pricing.remainingHours > 1 ? 's' : ''} × ${availability.pricePerHour})</span>
+                            <span>${(pricing.remainingHours * availability.pricePerHour * quantity).toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Quantity</span>
+                          <span>{quantity} vehicle{quantity > 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="flex justify-between text-lg font-bold border-t pt-2">
+                          <span>Total</span>
+                          <span>${pricing.totalPrice.toFixed(2)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
-              {/* Add to Booking Button */}
-              <Button onClick={handleAddToBooking} className="w-full" size="lg">
+              {/* Add to Cart Button */}
+              <Button 
+                onClick={handleAddToCart} 
+                className="w-full" 
+                size="lg"
+                disabled={
+                  !dateRange?.from || 
+                  !dateRange?.to || 
+                  !availability || 
+                  availability.availableCount === 0 || 
+                  !!getValidationError() ||
+                  checkingAvailability
+                }
+              >
                 <ShoppingCart className="mr-2 h-5 w-5" />
-                Add to Booking
+                Add to Cart
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                You can add multiple vehicles to your booking
+                Minimum rental period: {MINIMUM_RENTAL_HOURS} hours
               </p>
 
               {/* Contact Info */}

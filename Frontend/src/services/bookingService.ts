@@ -1,9 +1,11 @@
 import axiosInstance from '@/lib/axios';
 
 export interface CreateBookingRequest {
-  carIds: string[]; // UUID[]
-  expectedReceiveDate: string; // LocalDate format: YYYY-MM-DD
-  expectedReturnDate: string; // LocalDate format: YYYY-MM-DD
+  carTypeId: string;
+  quantity: number;
+  expectedReceiveDate: string; // ISO datetime format
+  expectedReturnDate: string; // ISO datetime format
+  payNow: boolean;
 }
 
 export interface CarResponse {
@@ -19,19 +21,12 @@ export interface CarResponse {
 
 export interface PaymentTransactionResponse {
   id: string;
-  amount: number;
-  status: string;
-  createdAt: string;
-}
-
-export interface PaymentTransactionResponse {
-  id: string;
   bookingId: string;
   amount: number;
   payOSPaymentCode: number;
   paymentUrl: string;
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
-  purpose: 'BOOKING_PAYMENT' | 'FINAL_PAYMENT';
+  purpose: 'BOOKING_PAYMENT' | 'FINAL_PAYMENT' | 'OVERDUE_PAYMENT';
   createdAt: string;
   lastUpdatedAt: string;
 }
@@ -41,8 +36,13 @@ export interface BookingResponse {
   cars: CarResponse[];
   totalPrice: number;
   bookingPrice: number;
+  depositAmount: number;
+  remainingAmount: number;
+  overdueCharge: number | null;
   expectedReceiveDate: string;
   expectedReturnDate: string;
+  actualReceiveDate: string | null;
+  actualReturnDate: string | null;
   status: string;
   createdAt: string;
   payments: PaymentTransactionResponse[];
@@ -65,5 +65,14 @@ export const createBooking = async (
  */
 export const getBookingById = async (bookingId: string): Promise<BookingResponse> => {
   const response = await axiosInstance.get<BookingResponse>(`/api/bookings/${bookingId}`);
+  return response.data;
+};
+
+/**
+ * Get all bookings of current user
+ * GET /api/bookings/my-bookings
+ */
+export const getMyBookings = async (): Promise<BookingResponse[]> => {
+  const response = await axiosInstance.get<BookingResponse[]>('/api/bookings/my-bookings');
   return response.data;
 };

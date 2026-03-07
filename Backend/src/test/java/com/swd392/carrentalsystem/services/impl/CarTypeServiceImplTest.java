@@ -1,5 +1,27 @@
 package com.swd392.carrentalsystem.services.impl;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarTypeResponse;
 import main.entities.CarBrand;
@@ -9,21 +31,6 @@ import main.repositories.CarBrandRepository;
 import main.repositories.CarTypeRepository;
 import main.services.MediaFileService;
 import main.services.impl.CarTypeServiceImpl;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CarTypeServiceImplTest {
@@ -76,7 +83,7 @@ class CarTypeServiceImplTest {
         when(carTypeMapper.toResponse(saved))
                 .thenReturn(response);
 
-        CarTypeResponse result = carTypeService.createType(request, null);
+        CarTypeResponse result = carTypeService.createType(request, null, null);
 
         assertNotNull(result);
         verify(carTypeRepository).save(entity);
@@ -166,7 +173,7 @@ class CarTypeServiceImplTest {
                 .thenReturn(response);
 
         CarTypeResponse result =
-                carTypeService.updateType(id, request, null);
+                carTypeService.updateType(id, request, null, null);
 
         assertNotNull(result);
         assertEquals("Updated", entity.getName());

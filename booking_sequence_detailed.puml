@@ -1,0 +1,167 @@
+@startuml Booking Sequence Diagram (Detailed)
+
+title Booking Sequence Diagram (By Page & Service)
+
+actor ":Renter" as Renter
+participant ":VehicleDetailPage" as VDP
+participant ":CartPage" as CART
+participant ":CheckoutPage" as COP
+participant ":MyBookingsPage" as MBP
+participant ":SuccessPage" as SP
+participant ":CarTypeService" as CTS
+participant ":BookingService" as BS
+participant ":PaymentTransactionService" as PTS
+participant ":PayosService" as PS
+participant ":Payment Gateway" as PAYOS
+
+' ── 1. Browse Vehicle ──
+Renter -> VDP : 1. Visit Vehicle Details page
+activate VDP
+VDP -> CTS : 1.1 getById(carTypeId)
+activate CTS
+CTS --> VDP : 1.2 CarType details
+deactivate CTS
+VDP --> Renter : 1.3 Display vehicle info
+deactivate VDP
+
+' ── 2. Select Dates & Check Availability ──
+Renter -> VDP : 2. Select pickup & return date+time
+activate VDP
+VDP -> VDP : 2.1 Validate minimum 5-hour rental
+
+VDP -> CTS : 2.2 checkAvailability(carTypeId, pickup, return)
+activate CTS
+note right of CTS
+  Apply 1-day IDAER buffer.
+  Check overlapping bookings.
+end note
+CTS --> VDP : 2.3 {availableCount, totalCount, prices}
+deactivate CTS
+
+VDP --> Renter : 2.4 Show availability, quantity selector,\npricing breakdown
+deactivate VDP
+
+' ── 3. Add to Cart ──
+Renter -> VDP : 3. Select quantity & click "Add to Cart"
+activate VDP
+VDP -> VDP : 3.1 Validate (no duplicate, min 5h)
+VDP -> VDP : 3.2 Calculate pricing
+VDP -> VDP : 3.3 Save to localStorage
+VDP --> Renter : 3.4 "Added to cart"
+deactivate VDP
+
+' ── 4. Cart ──
+Renter -> CART : 4. Open Cart
+activate CART
+CART --> Renter : 4.1 Show cart items
+deactivate CART
+
+' ── 5. Checkout ──
+Renter -> CART : 5. Click "Checkout" on a cart item
+activate CART
+CART -> COP : 5.1 Navigate to /checkout?cartItemId={id}
+deactivate CART
+activate COP
+COP --> Renter : 5.2 Checkout page\n(summary, deposit = 30%, payment options)
+deactivate COP
+
+' ── 6. Confirm Booking ──
+alt Pay Now
+    Renter -> COP : 6. Click "Pay Deposit Now"
+    activate COP
+    COP -> BS : 6.1 createBooking(request, accountId)
+    activate BS
+    note right of BS
+      Validate dates & availability.
+      Auto-assign cars.
+      Calculate price.
+      Save booking (CREATED).
+    end note
+
+    alt Not enough cars
+        BS --> COP : 6.2a Error: not enough cars
+        COP --> Renter : 6.3a Error message
+    else Success
+        BS -> PTS : 6.2b createPayment(bookingId,\nBOOKING_PAYMENT, depositAmount)
+        activate PTS
+        PTS -> PAYOS : 6.3b createPaymentLink(orderCode, amount)
+        activate PAYOS
+        PAYOS --> PTS : 6.4b checkoutUrl
+        deactivate PAYOS
+        PTS --> BS : 6.5b PaymentTransactionResponse
+        deactivate PTS
+        BS --> COP : 6.6b BookingResponse (paymentUrl)
+        deactivate BS
+        COP -> COP : 6.7b Remove item from cart
+        COP -> PAYOS : 6.8b Redirect to payment checkout
+        deactivate COP
+
+        Renter -> PAYOS : 7. Complete deposit payment
+        activate PAYOS
+        PAYOS -> PS : 7.1 handleWebhook(orderCode, PAID)
+        activate PS
+        note right of PS
+          Payment → PAID.
+          Booking: CREATED → CONFIRMED.
+        end note
+        deactivate PS
+        PAYOS --> SP : 7.2 Redirect to success page
+        deactivate PAYOS
+        activate SP
+        SP --> Renter : 7.3 Payment success (booking confirmed)
+        deactivate SP
+    end
+
+else Pay Later
+    Renter -> COP : 6. Click "Pay Later"
+    activate COP
+    COP -> BS : 6.1 createBooking(request, accountId)
+    activate BS
+    note right of BS
+      Same booking creation,
+      but **no payment link**.
+      Booking stays CREATED.
+    end note
+    BS --> COP : 6.2 BookingResponse (no payment)
+    deactivate BS
+    COP -> COP : 6.3 Remove item from cart
+    COP --> Renter : 6.4 "Booking created. Pay from My Bookings."
+    deactivate COP
+
+    ...Renter decides to pay later...
+
+    Renter -> MBP : 7. Go to My Bookings, click "Pay Now"
+    activate MBP
+    MBP -> PTS : 7.1 createPayment(bookingId,\nBOOKING_PAYMENT, depositAmount)
+    activate PTS
+    PTS -> PAYOS : 7.2 createPaymentLink(orderCode, amount)
+    activate PAYOS
+    PAYOS --> PTS : 7.3 checkoutUrl
+    deactivate PAYOS
+    PTS --> MBP : 7.4 PaymentTransactionResponse (paymentUrl)
+    deactivate PTS
+    MBP -> PAYOS : 7.5 Redirect to checkout
+    deactivate MBP
+
+    Renter -> PAYOS : 8. Complete deposit payment
+    activate PAYOS
+    PAYOS -> PS : 8.1 handleWebhook(orderCode, PAID)
+    activate PS
+    note right of PS
+      CREATED → CONFIRMED.
+    end note
+    deactivate PS
+    PAYOS --> SP : 8.2 Redirect to success page
+    deactivate PAYOS
+    activate SP
+    SP --> Renter : 8.3 Booking confirmed
+    deactivate SP
+end
+
+note across
+  Booking is now **CONFIRMED**.
+  Renter has paid 30% deposit. Cars are assigned.
+  Continues in Trip Management Sequence Diagram.
+end note
+
+@enduml

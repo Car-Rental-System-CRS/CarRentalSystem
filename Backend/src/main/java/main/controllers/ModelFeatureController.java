@@ -8,6 +8,7 @@ import main.services.ModelFeatureService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -22,6 +23,7 @@ public class ModelFeatureController {
 
     // ===== ATTACH FEATURE TO TYPE =====
     @PostMapping("/attach")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('MODEL_FEATURE_MANAGE')")
     public ResponseEntity<APIResponse<Void>> attach(
             @RequestParam UUID typeId,
             @RequestParam UUID featureId
@@ -39,6 +41,7 @@ public class ModelFeatureController {
 
     // ===== REMOVE FEATURE FROM TYPE =====
     @DeleteMapping("/detach")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('MODEL_FEATURE_MANAGE')")
     public ResponseEntity<APIResponse<Void>> detach(
             @RequestParam UUID typeId,
             @RequestParam UUID featureId
@@ -93,6 +96,7 @@ public class ModelFeatureController {
     }
 
     @PostMapping("/attach-bulk")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('MODEL_FEATURE_MANAGE')")
     public ResponseEntity<APIResponse<Void>> attachBulk(
             @RequestBody ModelFeatureRequest request) {
 
@@ -111,6 +115,7 @@ public class ModelFeatureController {
     }
 
     @PostMapping("/replace")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('MODEL_FEATURE_MANAGE')")
     public ResponseEntity<APIResponse<Void>> replace(
             @RequestBody ModelFeatureRequest request) {
 
@@ -129,6 +134,7 @@ public class ModelFeatureController {
     }
 
     @DeleteMapping("/detach-bulk")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('MODEL_FEATURE_MANAGE')")
     public ResponseEntity<APIResponse<Void>> detachBulk(
             @RequestBody ModelFeatureRequest request) {
 

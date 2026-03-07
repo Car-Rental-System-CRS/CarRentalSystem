@@ -22,6 +22,12 @@ interface AccountResponse {
     name: string;
     email: string;
     phone: string;
+    baseRole: 'USER' | 'STAFF' | 'ADMIN';
+    customRole: {
+      id: string;
+      name: string;
+    } | null;
+    scopes: string[];
   };
   timestamp: string;
 }
@@ -54,6 +60,9 @@ export const authService = {
       name: userData.name,
       email: userData.email,
       phone: userData.phone,
+      baseRole: userData.baseRole,
+      customRole: userData.customRole,
+      scopes: userData.scopes,
     };
 
     return { user, token };

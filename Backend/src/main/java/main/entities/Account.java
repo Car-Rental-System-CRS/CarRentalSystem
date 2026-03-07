@@ -32,6 +32,10 @@ public class Account extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private Role role = Role.USER;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "custom_role_id")
+    private CustomRole customRole;
     
     private String phone;
 

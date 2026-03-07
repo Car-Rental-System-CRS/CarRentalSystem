@@ -1,7 +1,25 @@
 export interface BookingPayload {
-  carIds: string[];
+  carTypeId: string;
+  quantity: number;
   expectedReceiveDate: string;
   expectedReturnDate: string;
+  payNow: boolean;
+}
+
+export interface CartItem {
+  id: string;              // Unique cart item ID (carTypeId + pickup + return)
+  carTypeId: string;
+  carTypeName: string;
+  pricePerHour: number;
+  pricePerDay: number;
+  quantity: number;
+  pickupDateTime: Date;
+  returnDateTime: Date;
+  totalHours: number;
+  totalDays: number;
+  remainingHours: number;
+  totalPrice: number;
+  image?: string;
 }
 
 export interface BookingItem {

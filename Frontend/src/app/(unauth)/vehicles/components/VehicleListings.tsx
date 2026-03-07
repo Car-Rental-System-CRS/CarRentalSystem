@@ -13,6 +13,7 @@ import { Search, Users, Fuel, Calendar, Loader2 } from 'lucide-react';
 import { BookingCart } from '@/components/BookingCart';
 import { toast } from 'sonner';
 import { useSessionStatus } from '@/components/SessionProvider';
+import { getServerUrl } from '@/lib/utils';
 
 export default function VehicleListings() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,7 +236,7 @@ export default function VehicleListings() {
                 {vehicle.image ? (
                   <div className="aspect-[4/3] relative">
                     <img
-                      src={vehicle.image}
+                      src={getServerUrl() + vehicle.image}
                       alt={vehicle.carName}
                       className="w-full h-full object-cover"
                     />
@@ -262,10 +263,6 @@ export default function VehicleListings() {
                   <div className="flex items-center gap-2">
                     <Fuel className="h-4 w-4" />
                     <span>{vehicle.consumption}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{vehicle.quantity} available</span>
                   </div>
                 </div>
 

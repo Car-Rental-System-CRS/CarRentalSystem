@@ -1,5 +1,6 @@
 package main.controllers;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,17 @@ public class BookingController {
     ) {
         BookingResponse response = bookingService.createBooking(request, userDetails.getAccountId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Get all bookings of current user
+     */
+    @GetMapping("/my-bookings")
+    public ResponseEntity<List<BookingResponse>> getMyBookings(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        List<BookingResponse> response = bookingService.getMyBookings(userDetails.getAccountId());
+        return ResponseEntity.ok(response);
     }
 
     /**

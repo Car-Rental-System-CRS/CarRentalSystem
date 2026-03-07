@@ -9,6 +9,10 @@ declare module 'next-auth' {
       name: string;
       email: string;
       phone: string;
+      baseRole: 'USER' | 'STAFF' | 'ADMIN';
+      customRoleId?: string;
+      customRoleName?: string;
+      scopes: string[];
     };
   }
 
@@ -18,6 +22,10 @@ declare module 'next-auth' {
     email: string;
     phone?: string;
     accessToken?: string;
+    baseRole?: 'USER' | 'STAFF' | 'ADMIN';
+    customRoleId?: string;
+    customRoleName?: string;
+    scopes?: string[];
   }
 }
 
@@ -26,5 +34,9 @@ declare module 'next-auth/jwt' {
     accessToken?: string;
     id?: string;
     phone?: string;
+    baseRole?: 'USER' | 'STAFF' | 'ADMIN';
+    customRoleId?: string;
+    customRoleName?: string;
+    scopes?: string[];
   }
 }

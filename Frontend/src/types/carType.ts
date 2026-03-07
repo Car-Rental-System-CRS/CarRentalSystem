@@ -2,6 +2,18 @@
 
 import { CarBrand } from './brand';
 
+export interface MediaFile {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  description?: string;
+  displayOrder?: number;
+  createdAt?: string;
+  modifiedAt?: string;
+}
+
 export interface CarType {
   id: string;
   name: string;
@@ -9,6 +21,9 @@ export interface CarType {
   consumptionKwhPerKm: number;
   price: number;
   carBrand: CarBrand;
+  description?: string;
+  carQuantity?: number;
+  mediaFiles?: MediaFile[];
 }
 
 export interface CreateCarTypePayload {
@@ -17,6 +32,17 @@ export interface CreateCarTypePayload {
   consumptionKwhPerKm: number;
   price: number;
   brandId: string;
+}
+
+export interface ImageWithDescription {
+  file: File;
+  originalFile: File;
+  description: string;
+  preview?: string;
+  isProcessing?: boolean;
+  originalSize?: number;
+  compressedSize?: number;
+  dimensions?: { width: number; height: number };
 }
 
 export type GetAllCarTypeParams = {

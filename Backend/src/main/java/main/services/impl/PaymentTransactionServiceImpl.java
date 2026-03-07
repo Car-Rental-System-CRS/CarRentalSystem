@@ -1,5 +1,12 @@
 package main.services.impl;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import main.dtos.response.PaymentTransactionResponse;
 import main.entities.Booking;
@@ -11,12 +18,6 @@ import main.repositories.BookingRepository;
 import main.repositories.PaymentTransactionRepository;
 import main.services.PaymentTransactionService;
 import main.services.PayosService;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -48,17 +49,19 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
                 .status(PaymentStatus.PENDING)
                 .build();
 
-        paymentTransactionRepository.save(transaction);
-
         // Call PayOS → get checkout URL
         String paymentLink =
                 payosService.createPaymentLink(
                         payOSOrderCode,
-                        transaction.getAmount(),
+                        amount,  // Use actual deposit amount
                         bookingId
                 );
+        
+        // Store the checkout URL in the transaction
+        transaction.setPaymentUrl(paymentLink);
+        paymentTransactionRepository.save(transaction);
 
-        PaymentTransactionResponse response =paymentTransactionMapper.toPaymentTransactionResponse(transaction);
+        PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
         response.setPaymentUrl(paymentLink);
         return response;
     }
@@ -72,10 +75,9 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         
         PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
         
-        // Get payment URL from PayOS if status is PENDING
-        if (transaction.getStatus() == PaymentStatus.PENDING) {
-            String paymentUrl = payosService.getPaymentLink(transaction.getPayOSPaymentCode());
-            response.setPaymentUrl(paymentUrl);
+        // Use stored payment URL if status is PENDING
+        if (transaction.getStatus() == PaymentStatus.PENDING && transaction.getPaymentUrl() != null) {
+            response.setPaymentUrl(transaction.getPaymentUrl());
         }
         
         return response;
@@ -89,10 +91,9 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         
         PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
         
-        // Get payment URL from PayOS if status is PENDING
-        if (transaction.getStatus() == PaymentStatus.PENDING) {
-            String paymentUrl = payosService.getPaymentLink(transaction.getPayOSPaymentCode());
-            response.setPaymentUrl(paymentUrl);
+        // Use stored payment URL if status is PENDING
+        if (transaction.getStatus() == PaymentStatus.PENDING && transaction.getPaymentUrl() != null) {
+            response.setPaymentUrl(transaction.getPaymentUrl());
         }
         
         return response;

@@ -101,7 +101,7 @@ export default function PaymentSuccessClient() {
                   <Button variant="outline" className="w-full">Go to Home</Button>
                 </Link>
                 {bookingId && (
-                  <Link href={`/profile/bookings`} className="flex-1">
+                  <Link href={`/bookings/${bookingId}`} className="flex-1">
                     <Button className="w-full">View My Bookings</Button>
                   </Link>
                 )}
@@ -250,7 +250,7 @@ export default function PaymentSuccessClient() {
               Back to Home
             </Button>
           </Link>
-          <Link href="/profile/bookings" className="flex-1">
+          <Link href={`/bookings/${booking.id}`} className="flex-1">
             <Button size="lg" className="w-full">View My Bookings</Button>
           </Link>
         </div>
