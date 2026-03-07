@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface CarTypeRepository extends
         JpaRepository<CarType, UUID>,
         JpaSpecificationExecutor<CarType> {
+
 }

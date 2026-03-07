@@ -19,15 +19,16 @@ import java.util.UUID;
 public class CarBrandServiceImpl implements CarBrandService {
 
     private final CarBrandRepository carBrandRepository;
+    private final CarBrandMapper carBrandMapper;
 
     @Override
     public CarBrandResponse createBrand(CreateCarBrandRequest request) {
 
-        CarBrand entity = CarBrandMapper.toEntity(request);
+        CarBrand entity = carBrandMapper.toEntity(request);
 
         CarBrand saved = carBrandRepository.save(entity);
 
-        return CarBrandMapper.toResponse(saved);
+        return carBrandMapper.toResponse(saved);
     }
 
     @Override
@@ -35,7 +36,7 @@ public class CarBrandServiceImpl implements CarBrandService {
         CarBrand entity = carBrandRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Car brand not found: " + id));
 
-        return CarBrandMapper.toResponse(entity);
+        return carBrandMapper.toResponse(entity);
     }
 
     @Override
@@ -45,7 +46,7 @@ public class CarBrandServiceImpl implements CarBrandService {
     ) {
         return carBrandRepository
                 .findAll(specification, pageable)
-                .map(CarBrandMapper::toResponse);
+                .map(carBrandMapper::toResponse);
     }
 
     @Override
@@ -56,7 +57,7 @@ public class CarBrandServiceImpl implements CarBrandService {
         entity.setName(request.getName());
 
         CarBrand saved = carBrandRepository.save(entity);
-        return CarBrandMapper.toResponse(saved);
+        return carBrandMapper.toResponse(saved);
     }
 
     @Override

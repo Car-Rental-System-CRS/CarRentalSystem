@@ -11,7 +11,7 @@ import { carBrandService } from '@/services/brandService';
 import { carTypeService } from '@/services/carTypeService';
 
 import { CarBrand } from '@/types/brand';
-import { CreateCarTypePayload } from '@/types/carType';
+import { CreateCarTypePayload, ImageWithDescription } from '@/types/carType';
 
 import {
   handleError,
@@ -33,7 +33,7 @@ export default function AddVehicleModelPage() {
   }, []);
 
   /* ---------- CREATE VEHICLE MODEL ---------- */
-  const handleCreate = async (payload: CreateCarTypePayload) => {
+  const handleCreate = async (payload: CreateCarTypePayload, imagesWithDescriptions?: ImageWithDescription[]) => {
     let toastId: string | number | null = null;
 
     try {
@@ -41,7 +41,7 @@ export default function AddVehicleModelPage() {
 
       toastId = showLoading('Creating vehicle model...');
 
-      await carTypeService.create(payload);
+      await carTypeService.create(payload, imagesWithDescriptions);
 
       if (toastId !== null) {
         dismissToast(toastId);

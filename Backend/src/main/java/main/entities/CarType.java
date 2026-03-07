@@ -30,6 +30,8 @@ public class CarType extends AuditableEntity{
     @Column(nullable = false)
     private double consumptionKwhPerKm;
 
+    private String description;
+
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
@@ -43,4 +45,10 @@ public class CarType extends AuditableEntity{
             orphanRemoval = true
     )
     private List<ModelFeature> modelFeatures = new ArrayList<>();
+
+    @OneToMany(mappedBy = "carType", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MediaFile> mediaFiles;
+
+    @OneToMany(mappedBy = "carType", fetch = FetchType.LAZY)
+    private List<Car> cars;
 }

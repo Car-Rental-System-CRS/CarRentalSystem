@@ -1,23 +1,39 @@
 package main.controllers;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import lombok.RequiredArgsConstructor;
 import main.dtos.APIResponse;
 import main.dtos.request.CreateCarTypeRequest;
+import main.dtos.response.CarAvailabilityResponse;
 import main.dtos.response.CarTypeResponse;
 import main.dtos.response.PageResponse;
 import main.entities.CarType;
 import main.services.CarTypeService;
 import main.specification.CarTypeSpecification;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/car-types")
@@ -26,9 +42,18 @@ public class CarTypeController {
 
     private final CarTypeService carTypeService;
 
-    @PostMapping
-    public ResponseEntity<APIResponse<CarTypeResponse>> create(@RequestBody CreateCarTypeRequest request) {
-        CarTypeResponse data = carTypeService.createType(request);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_TYPE_CREATE')")
+    public ResponseEntity<APIResponse<CarTypeResponse>> create(
+            @ModelAttribute CreateCarTypeRequest request,
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            @RequestParam(value = "imageDescriptions", required = false) List<String> imageDescriptionsList) {
+        
+        // Convert List to array for service method
+        String[] imageDescriptions = imageDescriptionsList != null ? 
+            imageDescriptionsList.toArray(new String[0]) : new String[0];
+        
+        CarTypeResponse data = carTypeService.createType(request, images, imageDescriptions);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 APIResponse.<CarTypeResponse>builder()
                         .success(true)
@@ -44,6 +69,23 @@ public class CarTypeController {
         CarTypeResponse data = carTypeService.getTypeById(id);
         return ResponseEntity.ok(
                 APIResponse.<CarTypeResponse>builder()
+                        .success(true)
+                        .message("OK")
+                        .data(data)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @GetMapping("/{id}/availability")
+    public ResponseEntity<APIResponse<CarAvailabilityResponse>> checkAvailability(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime pickupDateTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime returnDateTime
+    ) {
+        CarAvailabilityResponse data = carTypeService.checkAvailability(id, pickupDateTime, returnDateTime);
+        return ResponseEntity.ok(
+                APIResponse.<CarAvailabilityResponse>builder()
                         .success(true)
                         .message("OK")
                         .data(data)
@@ -85,11 +127,19 @@ public class CarTypeController {
         );
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_TYPE_EDIT')")
     public ResponseEntity<APIResponse<CarTypeResponse>> update(
             @PathVariable UUID id,
-            @RequestBody CreateCarTypeRequest request) {
-        CarTypeResponse data = carTypeService.updateType(id, request);
+            @ModelAttribute CreateCarTypeRequest request,
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            @RequestParam(value = "imageDescriptions", required = false) List<String> imageDescriptionsList) {
+        
+        // Convert List to array for service method
+        String[] imageDescriptions = imageDescriptionsList != null ? 
+            imageDescriptionsList.toArray(new String[0]) : new String[0];
+        
+        CarTypeResponse data = carTypeService.updateType(id, request, images, imageDescriptions);
         return ResponseEntity.ok(
                 APIResponse.<CarTypeResponse>builder()
                         .success(true)
@@ -101,12 +151,49 @@ public class CarTypeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_TYPE_DELETE')")
     public ResponseEntity<APIResponse<Void>> delete(@PathVariable UUID id) {
         carTypeService.deleteType(id);
         return ResponseEntity.ok(
                 APIResponse.<Void>builder()
                         .success(true)
                         .message("Car type deleted")
+                        .data(null)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_TYPE_IMAGE_MANAGE')")
+    public ResponseEntity<APIResponse<CarTypeResponse>> addImages(
+            @PathVariable UUID id,
+            @RequestParam("images") MultipartFile[] images,
+            @RequestParam(value = "imageDescriptions", required = false) List<String> imageDescriptionsList) {
+        
+        // Convert List to array for service method
+        String[] imageDescriptions = imageDescriptionsList != null ? 
+            imageDescriptionsList.toArray(new String[0]) : new String[0];
+        
+        CarTypeResponse data = carTypeService.addImagesToCarType(id, images, imageDescriptions);
+        return ResponseEntity.ok(
+                APIResponse.<CarTypeResponse>builder()
+                        .success(true)
+                        .message("Images added to car type")
+                        .data(data)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @DeleteMapping("/images/{imageId}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_TYPE_IMAGE_MANAGE')")
+    public ResponseEntity<APIResponse<Void>> removeImage(@PathVariable UUID imageId) {
+        carTypeService.removeImageFromCarType(imageId);
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .success(true)
+                        .message("Image removed from car type")
                         .data(null)
                         .timestamp(Instant.now())
                         .build()

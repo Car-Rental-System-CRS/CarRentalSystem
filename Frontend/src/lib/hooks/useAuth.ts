@@ -8,5 +8,8 @@ export function useAuth() {
     accessToken: (session as any)?.accessToken,
     isAuthenticated: status === 'authenticated',
     isLoading: status === 'loading',
+    baseRole: session?.user?.baseRole || 'USER',
+    scopes: session?.user?.scopes || [],
+    hasScope: (scope: string) => session?.user?.scopes?.includes(scope) ?? false,
   };
 }

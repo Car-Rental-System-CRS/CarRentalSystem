@@ -3,44 +3,45 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Car, Users, Settings, Home } from 'lucide-react';
+import { Car, Sliders, Tag, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { scopes } = useAuth();
 
-  const navItems = [
-    {
-      name: 'Dashboard',
-      href: '/staff/dashboard',
-      icon: LayoutDashboard,
-    },
+  const allNavItems = [
     {
       name: 'Vehicle Management',
       href: '/staff/vehicle',
       icon: Car,
+      requiredScope: 'CAR_TYPE_VIEW',
     },
     {
       name: 'Feature Management',
       href: '/staff/feature',
-      icon: Car,
+      icon: Sliders,
+      requiredScope: 'CAR_FEATURE_VIEW',
     },
     {
       name: 'Brand Management',
       href: '/staff/brand',
-      icon: Car,
+      icon: Tag,
+      requiredScope: 'CAR_BRAND_VIEW',
     },
     {
-      name: 'Users',
-      href: '/staff/user',
-      icon: Users,
-    },
-    {
-      name: 'Settings',
-      href: '/staff/setting',
-      icon: Settings,
+      name: 'Booking Management',
+      href: '/staff/bookings',
+      icon: ClipboardList,
+      requiredScope: 'BOOKING_MANAGE',
     },
   ];
+
+  // Filter nav items by user's scopes (if no scopes yet, show all to avoid flash)
+  const navItems = scopes && scopes.length > 0
+    ? allNavItems.filter((item) => scopes.includes(item.requiredScope))
+    : allNavItems;
 
   return (
     <div className="pt-16 h-screen">

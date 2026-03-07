@@ -6,6 +6,7 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import VehicleDetailHeader from './components/VehicleDetailHeader';
 import VehicleStatCards from './components/VehicleStatCards';
 import VehicleBrandCard from './components/VehicleBrandCard';
+import VehicleImagesCard from './components/VehicleImagesCard';
 import VehicleActionsCard from './components/VehicleActionsCard';
 import DeleteModal from '@/components/DeleteModal';
 
@@ -103,6 +104,12 @@ export default function VehicleDetailPage() {
       <VehicleDetailHeader vehicle={vehicle} />
 
       <VehicleStatCards vehicle={vehicle} />
+
+      {/* Car Type Images Card */}
+      <VehicleImagesCard
+        mediaFiles={vehicle.mediaFiles}
+        vehicleName={vehicle.name}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

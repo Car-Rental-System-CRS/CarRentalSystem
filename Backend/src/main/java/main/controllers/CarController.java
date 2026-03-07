@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -28,6 +29,7 @@ public class CarController {
     private final CarService carService;
 
     @PostMapping
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_CREATE')")
     public ResponseEntity<APIResponse<CarResponse>> create(@RequestBody CreateCarRequest request) {
         CarResponse data = carService.createCar(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -85,6 +87,7 @@ public class CarController {
 
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_EDIT')")
     public ResponseEntity<APIResponse<CarResponse>> update(
             @PathVariable UUID id,
             @RequestBody CreateCarRequest request) {
@@ -100,6 +103,7 @@ public class CarController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_DELETE')")
     public ResponseEntity<APIResponse<Void>> delete(@PathVariable UUID id) {
         carService.deleteCar(id);
         return ResponseEntity.ok(

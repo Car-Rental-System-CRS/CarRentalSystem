@@ -3,6 +3,7 @@ package main.dtos.response;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -18,5 +19,13 @@ public class CarTypeResponse {
     private double consumptionKwhPerKm;
     private BigDecimal price;
 
+    private String description;
+
+    private int carQuantity;
+
     private CarBrandResponse carBrand;
+    
+    private List<MediaFileResponse> mediaFiles;
+    
+    private List<CarFeatureResponse> features;
 }

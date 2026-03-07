@@ -4,6 +4,7 @@
 import { Car, MapPin, Calendar, Clock} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import Link from 'next/link';
 
 export default function HeroSection() {
   return (
@@ -217,10 +218,12 @@ export default function HeroSection() {
 
             {/* Enhanced Search Button */}
             <div className="mt-12 pt-8 border-t border-gray-100">
-              <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-7 text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
-                <Car className="w-6 h-6 mr-4 animate-pulse" />
-                Find a Car Now
-              </Button>
+              <Link href="/vehicles">
+                <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-7 text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
+                  <Car className="w-6 h-6 mr-4 animate-pulse" />
+                  Find a Car Now
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

@@ -1,5 +1,27 @@
 package com.swd392.carrentalsystem.services.impl;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarTypeResponse;
 import main.entities.CarBrand;
@@ -7,23 +29,8 @@ import main.entities.CarType;
 import main.mappers.CarTypeMapper;
 import main.repositories.CarBrandRepository;
 import main.repositories.CarTypeRepository;
+import main.services.MediaFileService;
 import main.services.impl.CarTypeServiceImpl;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CarTypeServiceImplTest {
@@ -33,6 +40,12 @@ class CarTypeServiceImplTest {
 
     @Mock
     private CarBrandRepository carBrandRepository;
+
+    @Mock
+    private MediaFileService mediaFileService;
+
+    @Mock
+    private CarTypeMapper carTypeMapper;
 
     @InjectMocks
     private CarTypeServiceImpl carTypeService;
@@ -61,19 +74,21 @@ class CarTypeServiceImplTest {
         when(carTypeRepository.save(entity))
                 .thenReturn(saved);
 
-        try (MockedStatic<CarTypeMapper> mapper = mockStatic(CarTypeMapper.class)) {
+        when(carTypeRepository.findById(saved.getId()))
+                .thenReturn(Optional.of(saved));
 
-            mapper.when(() -> CarTypeMapper.toEntity(request, brand))
-                    .thenReturn(entity);
+        when(carTypeMapper.toEntity(request, brand))
+                .thenReturn(entity);
 
-            mapper.when(() -> CarTypeMapper.toResponse(saved))
-                    .thenReturn(response);
+        when(carTypeMapper.toResponse(saved))
+                .thenReturn(response);
 
-            CarTypeResponse result = carTypeService.createType(request);
+        CarTypeResponse result = carTypeService.createType(request, null, null);
 
-            assertNotNull(result);
-            verify(carTypeRepository).save(entity);
-        }
+        assertNotNull(result);
+        verify(carTypeRepository).save(entity);
+        verify(carTypeMapper).toEntity(request, brand);
+        verify(carTypeMapper).toResponse(saved);
     }
 
     // ===== GET BY ID =====
@@ -88,15 +103,13 @@ class CarTypeServiceImplTest {
         when(carTypeRepository.findById(id))
                 .thenReturn(Optional.of(entity));
 
-        try (MockedStatic<CarTypeMapper> mapper = mockStatic(CarTypeMapper.class)) {
+        when(carTypeMapper.toResponse(entity))
+                .thenReturn(response);
 
-            mapper.when(() -> CarTypeMapper.toResponse(entity))
-                    .thenReturn(response);
+        CarTypeResponse result = carTypeService.getTypeById(id);
 
-            CarTypeResponse result = carTypeService.getTypeById(id);
-
-            assertNotNull(result);
-        }
+        assertNotNull(result);
+        verify(carTypeMapper).toResponse(entity);
     }
 
     // ===== GET ALL =====
@@ -110,19 +123,19 @@ class CarTypeServiceImplTest {
 
         Page<CarType> page = new PageImpl<>(List.of(entity));
 
-        when(carTypeRepository.findAll(any(Specification.class), eq(pageable)))
+        @SuppressWarnings("unchecked")
+        Specification<CarType> anySpec = any(Specification.class);
+        when(carTypeRepository.findAll(anySpec, eq(pageable)))
                 .thenReturn(page);
 
-        try (MockedStatic<CarTypeMapper> mapper = mockStatic(CarTypeMapper.class)) {
+        when(carTypeMapper.toResponse(entity))
+                .thenReturn(response);
 
-            mapper.when(() -> CarTypeMapper.toResponse(entity))
-                    .thenReturn(response);
+        Page<CarTypeResponse> result =
+                carTypeService.getAllTypes(pageable, null);
 
-            Page<CarTypeResponse> result =
-                    carTypeService.getAllTypes(pageable, null);
-
-            assertEquals(1, result.getTotalElements());
-        }
+        assertEquals(1, result.getTotalElements());
+        verify(carTypeMapper).toResponse(entity);
     }
 
     // ===== UPDATE =====
@@ -153,19 +166,20 @@ class CarTypeServiceImplTest {
         when(carTypeRepository.save(entity))
                 .thenReturn(saved);
 
-        try (MockedStatic<CarTypeMapper> mapper = mockStatic(CarTypeMapper.class)) {
+        when(carTypeRepository.findById(id))
+                .thenReturn(Optional.of(saved));
 
-            mapper.when(() -> CarTypeMapper.toResponse(saved))
-                    .thenReturn(response);
+        when(carTypeMapper.toResponse(saved))
+                .thenReturn(response);
 
-            CarTypeResponse result =
-                    carTypeService.updateType(id, request);
+        CarTypeResponse result =
+                carTypeService.updateType(id, request, null, null);
 
-            assertNotNull(result);
-            assertEquals("Updated", entity.getName());
-            assertEquals(7, entity.getNumberOfSeats());
-            assertEquals(brand, entity.getCarBrand());
-        }
+        assertNotNull(result);
+        assertEquals("Updated", entity.getName());
+        assertEquals(7, entity.getNumberOfSeats());
+        assertEquals(brand, entity.getCarBrand());
+        verify(carTypeMapper).toResponse(saved);
     }
 
     // ===== DELETE =====
@@ -179,6 +193,7 @@ class CarTypeServiceImplTest {
 
         carTypeService.deleteType(id);
 
+        verify(mediaFileService).deleteMediaFilesByCarType(id);
         verify(carTypeRepository).deleteById(id);
     }
 }

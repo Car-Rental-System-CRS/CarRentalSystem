@@ -12,7 +12,7 @@ import { carBrandService } from '@/services/brandService';
 import { carTypeService } from '@/services/carTypeService';
 
 import { CarBrand } from '@/types/brand';
-import { CreateCarTypePayload, CarType } from '@/types/carType';
+import { CreateCarTypePayload, CarType, ImageWithDescription } from '@/types/carType';
 
 import {
   handleError,
@@ -73,14 +73,14 @@ export default function EditVehicleModelPage() {
   };
 
   /* ---------- UPDATE ---------- */
-  const handleUpdate = async (payload: CreateCarTypePayload) => {
+  const handleUpdate = async (payload: CreateCarTypePayload, imagesWithDescriptions?: ImageWithDescription[]) => {
     let toastId: string | number | null = null;
 
     try {
       setSaving(true);
       toastId = showLoading('Updating vehicle model...');
 
-      await carTypeService.update(id, payload);
+      await carTypeService.update(id, payload, imagesWithDescriptions);
 
       if (toastId !== null) dismissToast(toastId);
 
