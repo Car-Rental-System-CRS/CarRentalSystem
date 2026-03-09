@@ -1,12 +1,28 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Save, Car, Tag, Users, Fuel, DollarSign, Upload, X, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  Save,
+  Car,
+  Tag,
+  Users,
+  Fuel,
+  DollarSign,
+  Upload,
+  X,
+  Plus,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { compressImage, getImageDimensions, formatFileSize } from '@/lib/imageUtils';
+import {
+  compressImage,
+  getImageDimensions,
+  formatFileSize,
+} from '@/lib/imageUtils';
 
 import { CarBrand } from '@/types/brand';
 import { CreateCarTypePayload, ImageWithDescription } from '@/types/carType';
@@ -14,7 +30,10 @@ import { CreateCarTypePayload, ImageWithDescription } from '@/types/carType';
 type Props = {
   brands: CarBrand[];
   initialValues?: CreateCarTypePayload;
-  onSubmit: (payload: CreateCarTypePayload, imagesWithDescriptions?: ImageWithDescription[]) => Promise<void>;
+  onSubmit: (
+    payload: CreateCarTypePayload,
+    imagesWithDescriptions?: ImageWithDescription[]
+  ) => Promise<void>;
   loading?: boolean;
   submitText?: string;
 };
@@ -34,7 +53,9 @@ export default function EditVehicleForm({
     price: 0,
   });
 
-  const [imagesWithDescriptions, setImagesWithDescriptions] = useState<ImageWithDescription[]>([]);
+  const [imagesWithDescriptions, setImagesWithDescriptions] = useState<
+    ImageWithDescription[]
+  >([]);
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const initializedRef = useRef(false);
 
@@ -56,13 +77,13 @@ export default function EditVehicleForm({
         return; // Don't update if outside valid range
       }
     }
-    
+
     setForm((p) => ({ ...p, [field]: value }));
   };
 
   const processImages = async (files: File[]) => {
     setIsProcessingImages(true);
-    
+
     try {
       const processedImages = await Promise.all(
         files.map(async (originalFile) => {
@@ -70,23 +91,24 @@ export default function EditVehicleForm({
             // Get original dimensions and size
             const dimensions = await getImageDimensions(originalFile);
             const originalSize = originalFile.size;
-            
+
             // Compress if image is larger than 2MB or dimensions are too large
-            const shouldCompress = originalSize > 2 * 1024 * 1024 || 
-                                 dimensions.width > 1920 || 
-                                 dimensions.height > 1080;
-            
+            const shouldCompress =
+              originalSize > 2 * 1024 * 1024 ||
+              dimensions.width > 1920 ||
+              dimensions.height > 1080;
+
             let processedFile = originalFile;
-            
+
             if (shouldCompress) {
               processedFile = await compressImage(originalFile, {
                 maxWidth: 1920,
                 maxHeight: 1080,
                 quality: 0.85,
-                format: 'image/jpeg'
+                format: 'image/jpeg',
               });
             }
-            
+
             return {
               file: processedFile,
               originalFile,
@@ -95,7 +117,7 @@ export default function EditVehicleForm({
               isProcessing: false,
               originalSize,
               compressedSize: processedFile.size,
-              dimensions
+              dimensions,
             };
           } catch (error) {
             console.error('Error processing image:', error);
@@ -108,13 +130,13 @@ export default function EditVehicleForm({
               isProcessing: false,
               originalSize: originalFile.size,
               compressedSize: originalFile.size,
-              dimensions: { width: 0, height: 0 }
+              dimensions: { width: 0, height: 0 },
             };
           }
         })
       );
-      
-      setImagesWithDescriptions(prev => [...prev, ...processedImages]);
+
+      setImagesWithDescriptions((prev) => [...prev, ...processedImages]);
     } catch (error) {
       console.error('Error processing images:', error);
     } finally {
@@ -124,11 +146,11 @@ export default function EditVehicleForm({
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (files.length > 0) {
       await processImages(files);
     }
-    
+
     // Reset file input
     e.target.value = '';
   };
@@ -154,31 +176,31 @@ export default function EditVehicleForm({
     if (item?.preview) {
       URL.revokeObjectURL(item.preview);
     }
-    
-    setImagesWithDescriptions(prev => prev.filter((_, i) => i !== index));
+
+    setImagesWithDescriptions((prev) => prev.filter((_, i) => i !== index));
   };
 
   const updateImageDescription = (index: number, description: string) => {
-    setImagesWithDescriptions(prev => 
-      prev.map((item, i) => i === index ? { ...item, description } : item)
+    setImagesWithDescriptions((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, description } : item))
     );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isProcessingImages) {
       alert('Please wait for images to finish processing before submitting.');
       return;
     }
-    
+
     await onSubmit(form, imagesWithDescriptions);
   };
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      imagesWithDescriptions.forEach(item => {
+      imagesWithDescriptions.forEach((item) => {
         if (item.preview) {
           URL.revokeObjectURL(item.preview);
         }
@@ -283,11 +305,13 @@ export default function EditVehicleForm({
             Add Images
           </Button>
         </div>
-        
+
         <p className="text-xs text-gray-500">
-          Upload new images and add descriptions for each image. Large images (>2MB or >1920×1080) will be automatically compressed for optimal performance.
+          Upload new images and add descriptions for each image. Large images
+          (2MB or 1920×1080) will be automatically compressed for optimal
+          performance.
         </p>
-        
+
         {/* Hidden file input for initial selection */}
         <Input
           type="file"
@@ -298,7 +322,7 @@ export default function EditVehicleForm({
           style={{ display: 'none' }}
           id="hidden-file-input"
         />
-        
+
         {/* Image Previews with Description Inputs */}
         {imagesWithDescriptions.length > 0 && (
           <div className="space-y-4">
@@ -324,36 +348,53 @@ export default function EditVehicleForm({
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  
+
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor={`description-${index}`} className="text-sm font-medium">
+                    <Label
+                      htmlFor={`description-${index}`}
+                      className="text-sm font-medium"
+                    >
                       Image Description {index + 1}
                     </Label>
                     <Input
                       id={`description-${index}`}
                       value={item.description}
-                      onChange={(e) => updateImageDescription(index, e.target.value)}
+                      onChange={(e) =>
+                        updateImageDescription(index, e.target.value)
+                      }
                       placeholder="Enter a description for this image..."
                       className="w-full"
                     />
-                    
+
                     {/* Image Info */}
                     <div className="text-xs text-gray-500 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span>Size: {formatFileSize(item.compressedSize || item.file.size)}</span>
-                        {item.originalSize && item.compressedSize && item.originalSize > item.compressedSize && (
-                          <span className="text-green-600">
-                            (compressed from {formatFileSize(item.originalSize)})
-                          </span>
-                        )}
+                        <span>
+                          Size:{' '}
+                          {formatFileSize(
+                            item.compressedSize || item.file.size
+                          )}
+                        </span>
+                        {item.originalSize &&
+                          item.compressedSize &&
+                          item.originalSize > item.compressedSize && (
+                            <span className="text-green-600">
+                              (compressed from{' '}
+                              {formatFileSize(item.originalSize)})
+                            </span>
+                          )}
                       </div>
                       {item.dimensions && item.dimensions.width > 0 && (
-                        <div>Dimensions: {item.dimensions.width} × {item.dimensions.height}</div>
+                        <div>
+                          Dimensions: {item.dimensions.width} ×{' '}
+                          {item.dimensions.height}
+                        </div>
                       )}
                     </div>
-                    
+
                     <p className="text-xs text-gray-500">
-                      Describe what users will see in this image (e.g., "Front view", "Interior dashboard", "Engine bay")
+                      Describe what users will see in this image (e.g., "Front
+                      view", "Interior dashboard", "Engine bay")
                     </p>
                   </div>
                 </div>
@@ -361,22 +402,25 @@ export default function EditVehicleForm({
             ))}
           </div>
         )}
-        
+
         {/* Processing indicator */}
         {isProcessingImages && (
           <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-4 text-center">
             <Loader2 className="w-8 h-8 text-blue-600 mx-auto mb-2 animate-spin" />
             <p className="text-blue-700 font-medium">Processing images...</p>
-            <p className="text-blue-600 text-sm">Compressing large images for optimal upload</p>
+            <p className="text-blue-600 text-sm">
+              Compressing large images for optimal upload
+            </p>
           </div>
         )}
-        
+
         {imagesWithDescriptions.length === 0 && !isProcessingImages && (
           <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 mb-2">No new images to add</p>
             <p className="text-sm text-gray-500 mb-4">
-              Click "Add Images" to upload additional vehicle photos with descriptions
+              Click "Add Images" to upload additional vehicle photos with
+              descriptions
             </p>
             <p className="text-xs text-gray-400">
               Large images will be automatically compressed for faster upload
@@ -387,9 +431,9 @@ export default function EditVehicleForm({
 
       {/* Submit */}
       <div className="pt-6 border-t">
-        <Button 
-          type="submit" 
-          disabled={loading || isProcessingImages} 
+        <Button
+          type="submit"
+          disabled={loading || isProcessingImages}
           className="w-full gap-2"
         >
           {isProcessingImages ? (
@@ -409,7 +453,7 @@ export default function EditVehicleForm({
             </>
           )}
         </Button>
-        
+
         {isProcessingImages && (
           <p className="text-xs text-orange-600 mt-2 text-center flex items-center justify-center gap-1">
             <AlertTriangle className="w-3 h-3" />
