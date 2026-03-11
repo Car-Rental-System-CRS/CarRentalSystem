@@ -54,7 +54,6 @@ public class CarMapper {
                 .typeId(carType != null ? carType.getId() : null)
                 .name(carType != null ? carType.getName() : null)
                 .brand(brandName)
-                .model(carType != null ? carType.getName() : null)
                 .year(year)
                 .pricePerDay(carType != null ? carType.getPrice() : null)
                 .quantity(1) // Single car instance
