@@ -106,7 +106,12 @@ public class PayosServiceImpl implements PayosService {
                 if (allPaid) {
                     booking.setStatus(BookingStatus.COMPLETED);
                 }
+            } else if (purpose == PaymentPurpose.FINAL_PAYMENT) {
+            // Remaining balance paid via QR after user accepted post-trip condition
+            if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                booking.setStatus(BookingStatus.COMPLETED);
             }
+        }
 
             paymentTransactionRepository.save(transaction);
 

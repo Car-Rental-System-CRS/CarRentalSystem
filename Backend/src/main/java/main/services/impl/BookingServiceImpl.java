@@ -1,39 +1,49 @@
 package main.services.impl;
 
-import java.math.BigDecimal;
-import java.time.Duration;      
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import lombok.RequiredArgsConstructor;
-import main.dtos.request.CreateBookingRequest;
-import main.dtos.response.AdminBookingResponse;
-import main.dtos.response.BookingResponse;
-import main.dtos.response.CarResponse;
-import main.dtos.response.PaymentTransactionResponse;
-import main.entities.Account;
+import main.dtos.request.ConfirmPostTripRequest;
+import main.dtos.request.PostTripConditionRequest;
+import main.dtos.response.PostTripConditionResponse;
+import main.dtos.response.*;
 import main.entities.Booking;
-import main.entities.BookingCar;
-import main.entities.Car;
+import main.entities.BookingTripCondition;
+import main.enums.*;
+import main.repositories.BookingRepository;
+import main.repositories.BookingTripConditionRepository;
+import main.services.PaymentTransactionService;
+import main.entities.*;
+import main.enums.FuelLevel;
+import main.enums.PostTripConfirmationStatus;
+import main.repositories.*;
+import main.dtos.request.CreateBookingRequest;
 import main.enums.BookingStatus;
 import main.enums.PaymentPurpose;
 import main.mappers.BookingMapper;
 import main.mappers.CarMapper;
-import main.repositories.AccountRepository;
-import main.repositories.BookingCarRepository;
-import main.repositories.BookingRepository;
-import main.repositories.CarRepository;
-import main.repositories.CarTypeRepository;
 import main.services.BookingService;
-import main.services.PaymentTransactionService;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +56,9 @@ public class BookingServiceImpl implements BookingService {
     private final CarRepository carRepository;
     private final CarTypeRepository carTypeRepository;
     private final AccountRepository accountRepository;
-
+    private final BookingTripConditionRepository tripConditionRepository;
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
 
     //===DEFINE BUSINESS RULES:====
     private static final int IDAER = 1; // invalid days after each rental
@@ -58,6 +70,10 @@ public class BookingServiceImpl implements BookingService {
             BookingStatus.CONFIRMED,
             BookingStatus.IN_PROGRESS
     );
+
+    //set = 0 if dont want to apply
+    private static final BigDecimal DAMAGE_FEE_MINOR   = new BigDecimal("500000");  // rating ≥ 3, has notes
+    private static final BigDecimal DAMAGE_FEE_MAJOR   = new BigDecimal("2000000"); // rating < 3
     //=============================
 
     @Override
@@ -408,4 +424,309 @@ public class BookingServiceImpl implements BookingService {
 
         return response;
     }
+
+    private Booking findBookingOrThrow(UUID bookingId) {
+        return bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+    }
+    private PostTripConditionResponse toResponse(Booking booking, BookingTripCondition condition) {
+        List<String> photoUrls = condition.getPhotoUrls() == null
+                ? List.of()
+                : condition.getPhotoUrls();
+
+        return PostTripConditionResponse.builder()
+                .bookingId(booking.getId())
+                .conditionReportId(condition.getId())
+                .actualReturnTimestamp(condition.getActualReturnTimestamp())
+                .expectedReturnDate(booking.getExpectedReturnDate())
+                .overallConditionRating(condition.getOverallConditionRating())
+                .odometerReading(condition.getOdometerReading())
+                .fuelLevel(condition.getFuelLevel() != null ? condition.getFuelLevel().name() : null)
+                .damageNotes(condition.getDamageNotes())
+                .photoUrls(photoUrls)
+                .baseRentalFee(booking.getBookingPrice())
+                .overdueFee(condition.getOverdueFee())
+                .damageFee(condition.getDamageFee())
+                .totalAmountDue(condition.getTotalAmountDue())
+                .bookingStatus(booking.getStatus())
+                .postTripConfirmationStatus(condition.getConfirmationStatus())
+                .disputeReason(condition.getDisputeReason())
+                .build();
+    }
+
+    private BigDecimal calculateDamageFee(BigDecimal rating, String damageNotes) {
+        boolean hasNotes = damageNotes != null && !damageNotes.isBlank();
+
+        // Perfect or near-perfect with no notes → free
+        if (rating.compareTo(new BigDecimal("4.0")) >= 0 && !hasNotes) {
+            return BigDecimal.ZERO;
+        }
+        // Rating < 3 → significant damage regardless of notes
+        if (rating.compareTo(new BigDecimal("3.0")) < 0) {
+            return DAMAGE_FEE_MAJOR;
+        }
+        // Rating 3–3.9, or has notes → minor damage fee
+        return DAMAGE_FEE_MINOR;
+    }
+    private List<String> savePostTripPhotos(List<MultipartFile> photos, UUID bookingId) {
+        try {
+            Path dir = Paths.get(uploadDir, "post-trip", bookingId.toString());
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+
+            return photos.stream().map(photo -> {
+                try {
+                    String original = photo.getOriginalFilename();
+                    String ext = (original != null && original.contains("."))
+                            ? original.substring(original.lastIndexOf("."))
+                            : "";
+                    String filename = UUID.randomUUID() + ext;
+
+                    Files.copy(photo.getInputStream(), dir.resolve(filename),
+                            StandardCopyOption.REPLACE_EXISTING);
+
+                    return "/uploads/post-trip/" + bookingId + "/" + filename;
+
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to store post-trip photo: " + e.getMessage(), e);
+                }
+            }).collect(Collectors.toList());
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create post-trip photo directory: " + e.getMessage(), e);
+        }
+    }
+
+
+    // STEP 1 — Staff records vehicle return timestamp
+    // Transition: IN_PROGRESS → RETURNED
+    // Note: overdue fee calculation stays in confirmReturn() as you have it.
+    //       Here we just record the moment and create the condition report shell.
+    // ─────────────────────────────────────────────────────────────────────────
+    @Transactional
+    public PostTripConditionResponse recordReturnTimestamp(UUID bookingId) {
+        Booking booking = findBookingOrThrow(bookingId);
+
+        if (booking.getStatus() != BookingStatus.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "Cannot record return: booking must be IN_PROGRESS. Current: " + booking.getStatus()
+            );
+        }
+
+        if (tripConditionRepository.existsByBookingId(bookingId)) {
+            throw new IllegalStateException(
+                    "Return timestamp already recorded for booking: " + bookingId
+            );
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Create condition report shell — photos + fields filled in step 2
+        BookingTripCondition condition = BookingTripCondition.builder()
+                .booking(booking)
+                .actualReturnTimestamp(now)
+                .confirmationStatus(PostTripConfirmationStatus.PENDING_USER)
+                .build();
+        tripConditionRepository.save(condition);
+
+        // Transition booking status
+        booking.setActualReturnDate(now);
+        booking.setStatus(BookingStatus.RETURNED);
+        bookingRepository.save(booking);
+
+        return toResponse(booking, condition);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Flow 2- return - STEP 2 — Staff uploads post-trip photos + condition report
+    // Transition: RETURNED → PENDING_USER_CONFIRMATION
+    // Uses same local-storage pattern as MediaFileServiceImpl
+    // ─────────────────────────────────────────────────────────────────────────
+    @Transactional
+    public PostTripConditionResponse uploadPostTripCondition(
+            UUID bookingId,
+            PostTripConditionRequest request,
+            List<MultipartFile> photos
+    ) {
+        Booking booking = findBookingOrThrow(bookingId);
+
+        if (booking.getStatus() != BookingStatus.RETURNED) {
+            throw new IllegalStateException(
+                    "Cannot upload post-trip condition: return timestamp must be recorded first. Current: "
+                            + booking.getStatus()
+            );
+        }
+
+        BookingTripCondition condition = tripConditionRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No return timestamp recorded for booking: " + bookingId
+                ));
+
+        // Condition fields
+        condition.setOverallConditionRating(request.getOverallConditionRating());
+        condition.setOdometerReading(request.getOdometerReading());
+        condition.setFuelLevel(FuelLevel.valueOf(request.getFuelLevel().toUpperCase()));
+        condition.setDamageNotes(request.getDamageNotes());
+
+        // Save photos using same pattern as MediaFileServiceImpl
+        List<String> photoUrls = savePostTripPhotos(photos, bookingId);
+        condition.setPhotoUrls(photoUrls);
+
+        // Damage fee — overdue fee already handled by existing confirmReturn() flow
+        BigDecimal damageFee = calculateDamageFee(
+                request.getOverallConditionRating(),
+                request.getDamageNotes()
+        );
+        condition.setDamageFee(damageFee);
+
+        // Total = base booking price + any overdue already on the booking + damage
+        BigDecimal overdueFee = booking.getOverdueCharge() != null
+                ? booking.getOverdueCharge()
+                : BigDecimal.ZERO;
+        BigDecimal total = booking.getBookingPrice()
+                .add(overdueFee)
+                .add(damageFee);
+
+        condition.setOverdueFee(overdueFee);
+        condition.setTotalAmountDue(total);
+        condition.setConfirmationStatus(PostTripConfirmationStatus.PENDING_USER);
+
+        tripConditionRepository.save(condition);
+
+        // Update booking remaining amount to reflect final total
+        booking.setTotalPrice(total);
+        booking.setRemainingAmount(total.subtract(booking.getDepositAmount()));
+        booking.setStatus(BookingStatus.PENDING_USER_CONFIRMATION);
+        bookingRepository.save(booking);
+
+        return toResponse(booking, condition);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Flow 2 - return - STEP 3 — User reviews condition and accepts or disputes
+    // ACCEPT  → PENDING_PAYMENT (ready for PayOS QR or cash)
+    // DISPUTE → DISPUTED (staff resolves manually)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fetches the post-trip condition report for a booking.
+     * Ownership-checked — only the booking's account can view.
+     * Available once staff has completed upload-post-trip-condition (status: PENDING_USER_CONFIRMATION and beyond).
+     */
+    @Transactional(readOnly = true)
+    public PostTripConditionResponse getPostTripCondition(UUID bookingId, UUID accountId) {
+        Booking booking = findBookingOrThrow(bookingId);
+
+        if (!booking.getAccount().getId().equals(accountId)) {
+            throw new IllegalStateException("You are not the owner of this booking");
+        }
+
+        BookingTripCondition condition = tripConditionRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Post-trip condition report is not yet available for this booking"
+                ));
+
+        return toResponse(booking, condition);
+    }
+
+    @Transactional
+    public PostTripConditionResponse confirmPostTripCondition(
+            UUID bookingId,
+            UUID accountId,
+            ConfirmPostTripRequest request
+    ) {
+        Booking booking = findBookingOrThrow(bookingId);
+
+        // Ownership check — matches your existing pattern using Account
+        if (!booking.getAccount().getId().equals(accountId)) {
+            throw new IllegalStateException("You are not the owner of this booking");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING_USER_CONFIRMATION) {
+            throw new IllegalStateException(
+                    "Cannot confirm: booking is not awaiting user confirmation. Current: "
+                            + booking.getStatus()
+            );
+        }
+
+        BookingTripCondition condition = tripConditionRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No post-trip condition report found for booking: " + bookingId
+                ));
+
+        PostTripConditionResponse response;
+
+        if (request.getAction() == ConfirmPostTripRequest.Action.ACCEPT) {
+            condition.setConfirmationStatus(PostTripConfirmationStatus.ACCEPTED);
+            booking.setStatus(BookingStatus.PENDING_PAYMENT);
+            tripConditionRepository.save(condition);
+            bookingRepository.save(booking);
+
+            // Create PayOS payment for remaining balance (QR path)
+            // Cash path skips this — staff calls markFinalPaid() instead
+            BigDecimal remaining = booking.getRemainingAmount();
+            String paymentUrl = null;
+            if (remaining != null && remaining.compareTo(BigDecimal.ZERO) > 0) {
+                var payment = paymentTransactionService.createPayment(
+                        bookingId,
+                        PaymentPurpose.FINAL_PAYMENT,
+                        remaining
+                );
+                paymentUrl = payment.getPaymentUrl();
+            }
+
+            response = toResponse(booking, condition);
+            response.setPaymentUrl(paymentUrl);
+
+        } else { // DISPUTE
+            if (request.getDisputeReason() == null || request.getDisputeReason().isBlank()) {
+                throw new IllegalArgumentException("disputeReason is required when action is DISPUTE");
+            }
+            condition.setConfirmationStatus(PostTripConfirmationStatus.DISPUTED);
+            condition.setDisputeReason(request.getDisputeReason());
+            booking.setStatus(BookingStatus.DISPUTED);
+            tripConditionRepository.save(condition);
+            bookingRepository.save(booking);
+
+            response = toResponse(booking, condition);
+        }
+
+        return response;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Flow 2 - return - STEP 4 (cash path) — Staff confirms cash payment received
+    // Transition: PENDING_PAYMENT → COMPLETED
+    // Guard: user must have ACCEPTED the condition report first
+    // ─────────────────────────────────────────────────────────────────────────
+    @Transactional
+    public PostTripConditionResponse markFinalPaid(UUID bookingId) {
+        Booking booking = findBookingOrThrow(bookingId);
+
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new IllegalStateException(
+                    "Cannot mark as paid: booking must be PENDING_PAYMENT. Current: "
+                            + booking.getStatus()
+            );
+        }
+
+        BookingTripCondition condition = tripConditionRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No post-trip condition report found for booking: " + bookingId
+                ));
+
+        // Extra guard — user must have explicitly accepted
+        if (condition.getConfirmationStatus() != PostTripConfirmationStatus.ACCEPTED) {
+            throw new IllegalStateException(
+                    "Cannot mark as paid: user has not accepted the post-trip condition report"
+            );
+        }
+
+        booking.setStatus(BookingStatus.COMPLETED);
+        bookingRepository.save(booking);
+
+        return toResponse(booking, condition);
+    }
+
 }
