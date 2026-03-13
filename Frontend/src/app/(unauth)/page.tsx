@@ -1,13 +1,12 @@
 // app/page.tsx
 import { Metadata } from 'next';
 
-
 import HeroSection from './components/HeroSection';
 import CarsSection from './components/CarSection';
 import FeaturesSection from './components/FeatureSection';
 import RentalStepsSection from './components/RentalStepSection';
 import AboutSection from './components/AboutSection';
-
+import ChatWidget from './components/ChatWidget';
 
 export const metadata: Metadata = {
   title: 'EcoDrive - Self-drive & Travel Car Rental',
@@ -31,6 +30,7 @@ export default async function HomePage() {
       <FeaturesSection />
       <RentalStepsSection />
       <AboutSection />
+      <ChatWidget />
     </div>
   );
 }

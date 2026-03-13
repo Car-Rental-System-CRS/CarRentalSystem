@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import main.dtos.response.CarFeatureResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -255,4 +256,18 @@ public class CarTypeServiceImpl implements CarTypeService {
                 .returnDateTime(returnDateTime)
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public List<CarType> getAllInventoryWithData() {
+        // 1. Fetch the bulk of the data
+        List<CarType> carTypes = carTypeRepository.findAllWithFeatures();
+
+        // 2. Fetch the cars for those specific types
+        if (!carTypes.isEmpty()) {
+            carTypeRepository.fetchCarsForTypes(carTypes);
+        }
+
+        return carTypes;
+    }
+
 }

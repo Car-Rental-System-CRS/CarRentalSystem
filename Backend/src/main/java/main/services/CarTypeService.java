@@ -1,6 +1,7 @@
 package main.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -35,4 +36,7 @@ public interface CarTypeService {
      * Check car availability for a specific car type within a date range
      */
     CarAvailabilityResponse checkAvailability(UUID carTypeId, LocalDateTime pickupDateTime, LocalDateTime returnDateTime);
-}
+
+    List<CarType> getAllInventoryWithData();
+
+    }
