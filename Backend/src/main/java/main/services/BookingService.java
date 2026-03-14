@@ -3,6 +3,8 @@ package main.services;
 import java.util.List;
 import java.util.UUID;
 
+import main.dtos.request.CarConditionRequest;
+import main.dtos.response.CarConditionResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -37,4 +39,10 @@ public interface BookingService {
 
     // Confirm car return — IN_PROGRESS → COMPLETED (or pending overdue payment)
     AdminBookingResponse confirmReturn(UUID bookingId);
+
+
+    List<CarConditionResponse> uploadPostTripCarConditions(UUID bookingId, List<CarConditionRequest> conditions);
+    AdminBookingResponse generateFinalPaymentQr(UUID bookingId);
+    AdminBookingResponse markOverduePaid(UUID bookingId);
+    AdminBookingResponse markFinalPaid(UUID bookingId);
 }

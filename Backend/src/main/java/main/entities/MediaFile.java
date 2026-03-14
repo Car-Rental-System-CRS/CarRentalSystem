@@ -36,6 +36,17 @@ public class MediaFile extends AuditableEntity {
     private Integer displayOrder; // for ordering media files
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "car_type_id", nullable = false)
+    @JoinColumn(name = "car_type_id", nullable = true)
     private CarType carType;
+
+    //SQL Codes to modify carTypeFK
+//    ALTER TABLE media_files
+//    ALTER COLUMN car_type_id UNIQUEIDENTIFIER NULL;
+
+//    ALTER TABLE media_files
+//    ALTER COLUMN media_context NVARCHAR(255) NULL;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_condition_id")
+    private CarCondition carCondition; // nullable — existing car type photos unaffected
 }

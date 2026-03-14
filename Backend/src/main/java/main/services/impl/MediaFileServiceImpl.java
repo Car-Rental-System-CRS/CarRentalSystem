@@ -8,6 +8,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
+import main.entities.CarCondition;
+import main.repositories.CarConditionRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ public class MediaFileServiceImpl implements MediaFileService {
     
     private final MediaFileRepository mediaFileRepository;
     private final CarTypeRepository carTypeRepository;
+    private final CarConditionRepository carConditionRepository;
     
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
@@ -161,6 +164,54 @@ public class MediaFileServiceImpl implements MediaFileService {
         } catch (IOException e) {
             // Log error but don't throw exception to allow database deletion to proceed
             System.err.println("Failed to delete physical file: " + fileUrl + " - " + e.getMessage());
+        }
+    }
+    @Override
+    @Transactional
+    public MediaFile uploadCarConditionPhoto(UUID carConditionId, MultipartFile file, String description, Integer displayOrder) {
+        CarCondition carCondition = carConditionRepository.findById(carConditionId)
+                .orElseThrow(() -> new IllegalArgumentException("Car condition not found: " + carConditionId));
+
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+
+        try {
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            Path conditionDir = uploadPath.resolve("car-conditions").resolve(carConditionId.toString());
+            if (!Files.exists(conditionDir)) {
+                Files.createDirectories(conditionDir);
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String uniqueFilename = UUID.randomUUID().toString() + fileExtension;
+
+            Path filePath = conditionDir.resolve(uniqueFilename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            String fileUrl = "/uploads/car-conditions/" + carConditionId + "/" + uniqueFilename;
+
+            MediaFile mediaFile = MediaFile.builder()
+                    .fileName(originalFilename)
+                    .fileUrl(fileUrl)
+                    .fileType(file.getContentType())
+                    .fileSize(file.getSize())
+                    .description(description)
+                    .displayOrder(displayOrder != null ? displayOrder : 0)
+                    .carCondition(carCondition)
+                    .build();
+
+            return mediaFileRepository.save(mediaFile);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store file: " + e.getMessage(), e);
         }
     }
 }

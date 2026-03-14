@@ -100,10 +100,15 @@ public class PayosServiceImpl implements PayosService {
                     booking.setStatus(BookingStatus.CONFIRMED);
                 }
             } else if (purpose == PaymentPurpose.OVERDUE_PAYMENT) {
-                // Overdue payment — check if all pending payments are now paid, then COMPLETED
                 boolean allPaid = booking.getPaymentTransactions().stream()
                         .allMatch(tx -> tx.getStatus() == PaymentStatus.PAID);
-                if (allPaid) {
+                if (allPaid && booking.getStatus() == BookingStatus.PENDING_OVERDUE) {
+                    booking.setStatus(BookingStatus.COMPLETED_OVERDUE);
+                }
+            } else if (purpose == PaymentPurpose.FINAL_PAYMENT) {
+                boolean allPaid = booking.getPaymentTransactions().stream()
+                        .allMatch(tx -> tx.getStatus() == PaymentStatus.PAID);
+                if (allPaid && booking.getStatus() == BookingStatus.PENDING_FINAL_PAYMENT) {
                     booking.setStatus(BookingStatus.COMPLETED);
                 }
             }

@@ -19,4 +19,6 @@ public interface MediaFileService {
     void deleteMediaFile(UUID id);
 
     void deleteMediaFilesByCarType(UUID carTypeId);
+
+    MediaFile uploadCarConditionPhoto(UUID carConditionId, MultipartFile file, String description, Integer displayOrder);
 }

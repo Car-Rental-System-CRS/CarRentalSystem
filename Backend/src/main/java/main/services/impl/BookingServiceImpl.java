@@ -5,8 +5,15 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import main.dtos.request.CarConditionRequest;
+import main.dtos.response.*;
+import main.entities.*;
+import main.enums.PaymentStatus;
+import main.repositories.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -15,23 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateBookingRequest;
-import main.dtos.response.AdminBookingResponse;
-import main.dtos.response.BookingResponse;
-import main.dtos.response.CarResponse;
-import main.dtos.response.PaymentTransactionResponse;
-import main.entities.Account;
-import main.entities.Booking;
-import main.entities.BookingCar;
-import main.entities.Car;
 import main.enums.BookingStatus;
 import main.enums.PaymentPurpose;
 import main.mappers.BookingMapper;
 import main.mappers.CarMapper;
-import main.repositories.AccountRepository;
-import main.repositories.BookingCarRepository;
-import main.repositories.BookingRepository;
-import main.repositories.CarRepository;
-import main.repositories.CarTypeRepository;
 import main.services.BookingService;
 import main.services.PaymentTransactionService;
 
@@ -46,6 +40,8 @@ public class BookingServiceImpl implements BookingService {
     private final CarRepository carRepository;
     private final CarTypeRepository carTypeRepository;
     private final AccountRepository accountRepository;
+    private final CarConditionRepository carConditionRepository;
+    private final MediaFileRepository mediaFileRepository;
 
 
     //===DEFINE BUSINESS RULES:====
@@ -56,7 +52,10 @@ public class BookingServiceImpl implements BookingService {
     private static final List<BookingStatus> BLOCKING_STATUSES = List.of(
             BookingStatus.CREATED,
             BookingStatus.CONFIRMED,
-            BookingStatus.IN_PROGRESS
+            BookingStatus.IN_PROGRESS,
+            BookingStatus.PENDING_OVERDUE, //from here on, the status meaning: car returned to company, but not completed booking (payment pending, condition report pending...)
+            BookingStatus.COMPLETED_OVERDUE,
+            BookingStatus.PENDING_FINAL_PAYMENT
     );
     //=============================
 
@@ -347,8 +346,9 @@ public class BookingServiceImpl implements BookingService {
 
             booking.setOverdueCharge(overdueCharge);
             booking.setTotalPrice(booking.getBookingPrice().add(overdueCharge));
-            booking.setRemainingAmount(booking.getRemainingAmount().add(overdueCharge));
-            // Keep IN_PROGRESS until overdue payment is made
+//            booking.setRemainingAmount(booking.getRemainingAmount().add(overdueCharge));
+            // Set to PENDING_OVERDUE until overdue payment is made
+            booking.setStatus(BookingStatus.PENDING_OVERDUE);
             bookingRepository.save(booking);
 
             // Create overdue payment transaction via PayOS
@@ -359,13 +359,150 @@ public class BookingServiceImpl implements BookingService {
             );
         } else {
             // On time or early — complete the booking
-            booking.setStatus(BookingStatus.COMPLETED);
+            booking.setStatus(BookingStatus.COMPLETED_OVERDUE);
             bookingRepository.save(booking);
         }
 
         return toAdminBookingResponse(booking);
     }
 
+    @Override
+    @Transactional
+    public List<CarConditionResponse> uploadPostTripCarConditions(
+            UUID bookingId, List<CarConditionRequest> conditionRequests) {
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getStatus() != BookingStatus.COMPLETED_OVERDUE) {
+            throw new IllegalStateException(
+                    "Booking must be in COMPLETED_OVERDUE to upload conditions. Current: "
+                            + booking.getStatus()
+                            + (booking.getStatus() == BookingStatus.PENDING_OVERDUE
+                            ? " — overdue charge must be settled first." : ""));
+        }
+
+        List<BookingCar> bookingCars = bookingCarRepository.findByBookingId(bookingId);
+
+        if (conditionRequests.size() != bookingCars.size()) {
+            throw new IllegalArgumentException(
+                    "Expected " + bookingCars.size() + " car condition(s), got "
+                            + conditionRequests.size() + ".");
+        }
+
+        Set<UUID> validCarIds = bookingCars.stream()
+                .map(bc -> bc.getCar().getId())
+                .collect(Collectors.toSet());
+
+        for (CarConditionRequest req : conditionRequests) {
+            if (!validCarIds.contains(req.getCarId())) {
+                throw new IllegalArgumentException(
+                        "Car " + req.getCarId()
+                                + " does not belong to booking " + bookingId + ".");
+            }
+        }
+
+        List<CarConditionResponse> responses = new ArrayList<>();
+
+        for (CarConditionRequest req : conditionRequests) {
+            Car car = carRepository.findById(req.getCarId())
+                    .orElseThrow(() -> new RuntimeException("Car not found: " + req.getCarId()));
+
+            CarCondition condition = CarCondition.builder()
+                    .booking(booking)
+                    .car(car)
+                    .odometer(req.getOdometer())
+                    .fuelLevel(req.getFuelLevel())
+                    .photos(new ArrayList<>())
+                    .build();
+
+            CarCondition saved = carConditionRepository.save(condition);
+
+            CarConditionResponse response = new CarConditionResponse();
+            response.setId(saved.getId());
+            response.setCarId(car.getId());
+            response.setCarName(car.getCarType().getName());
+            response.setOdometer(saved.getOdometer());
+            response.setFuelLevel(saved.getFuelLevel());
+            response.setPhotos(List.of());
+            responses.add(response);
+        }
+
+        booking.setStatus(BookingStatus.PENDING_FINAL_PAYMENT);
+        bookingRepository.save(booking);
+
+        return responses;
+    }
+
+    @Override
+    @Transactional
+    public AdminBookingResponse generateFinalPaymentQr(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getStatus() != BookingStatus.PENDING_FINAL_PAYMENT) {
+            throw new IllegalStateException(
+                    "Booking must be in PENDING_FINAL_PAYMENT to generate final payment QR. Current: "
+                            + booking.getStatus());
+        }
+
+        paymentTransactionService.createPayment(
+                bookingId,
+                PaymentPurpose.FINAL_PAYMENT,
+                booking.getRemainingAmount()
+        );
+
+        return toAdminBookingResponse(booking);
+    }
+
+    @Override
+    @Transactional
+    public AdminBookingResponse markOverduePaid(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getStatus() != BookingStatus.PENDING_OVERDUE) {
+            throw new IllegalStateException(
+                    "Booking must be in PENDING_OVERDUE to mark overdue as paid. Current: "
+                            + booking.getStatus());
+        }
+
+        // Cancel the PayOS overdue transaction — customer paid cash instead
+        booking.getPaymentTransactions().stream()
+                .filter(tx -> tx.getPurpose() == PaymentPurpose.OVERDUE_PAYMENT
+                        && tx.getStatus() == PaymentStatus.PENDING)
+                .forEach(tx -> tx.setStatus(PaymentStatus.CANCELLED));
+
+        booking.setStatus(BookingStatus.COMPLETED_OVERDUE);
+        bookingRepository.save(booking);
+
+        return toAdminBookingResponse(booking);
+    }
+
+    @Override
+    @Transactional
+    public AdminBookingResponse markFinalPaid(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getStatus() != BookingStatus.PENDING_FINAL_PAYMENT) {
+            throw new IllegalStateException(
+                    "Booking must be in PENDING_FINAL_PAYMENT to mark final payment. Current: "
+                            + booking.getStatus());
+        }
+
+        // Cancel any pending FINAL_PAYMENT QR transactions — customer switched to cash
+        booking.getPaymentTransactions().stream()
+                .filter(tx -> tx.getPurpose() == PaymentPurpose.FINAL_PAYMENT
+                        && tx.getStatus() == PaymentStatus.PENDING)
+                .forEach(tx -> tx.setStatus(PaymentStatus.CANCELLED));
+
+        booking.setRemainingAmount(BigDecimal.ZERO);
+        booking.setStatus(BookingStatus.COMPLETED);
+        bookingRepository.save(booking);
+
+        return toAdminBookingResponse(booking);
+    }
     /**
      * Helper: Convert Booking entity to AdminBookingResponse
      */
