@@ -10,6 +10,8 @@ import {
   dismissToast,
 } from '@/lib/errorHandler';
 import { carService } from '@/services/carService';
+import { CarDamageImage } from '@/types/car';
+import { ImageWithDescription } from '@/types/carType';
 
 import EditHeader from './components/EditHeader';
 import EditUnitForm from './components/EditUnitForm';
@@ -19,6 +21,7 @@ type Unit = {
   id: string;
   licensePlate: string;
   importDate: string;
+  damageImages?: CarDamageImage[];
 };
 
 export default function EditUnitPage() {
@@ -33,6 +36,10 @@ export default function EditUnitPage() {
   const unitId = params.carId;
 
   const [unit, setUnit] = useState<Unit | null>(null);
+  const [existingDamageImages, setExistingDamageImages] = useState<
+    CarDamageImage[]
+  >([]);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -48,6 +55,7 @@ export default function EditUnitPage() {
         const data = res.data.data;
 
         setUnit(data);
+        setExistingDamageImages(data.damageImages || []);
         setForm({
           license: data.licensePlate,
           importDate: data.importDate,
@@ -63,7 +71,23 @@ export default function EditUnitPage() {
   }, [unitId, vehicleId, router]);
 
   /* ---------- UPDATE ---------- */
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleDeleteExistingDamageImage = async (imageId: string) => {
+    try {
+      setDeletingImageId(imageId);
+      await carService.deleteDamageImage(unitId, imageId);
+      setExistingDamageImages((prev) => prev.filter((img) => img.id !== imageId));
+      handleSuccess('Damage image deleted');
+    } catch (err) {
+      handleError(err, 'Failed to delete damage image');
+    } finally {
+      setDeletingImageId(null);
+    }
+  };
+
+  const handleSubmit = async (
+    e: React.FormEvent,
+    newDamageImages: ImageWithDescription[]
+  ) => {
     e.preventDefault();
 
     let toastId: string | number | null = null;
@@ -83,6 +107,24 @@ export default function EditUnitPage() {
         importDate: form.importDate,
         typeId,
       });
+
+      if (newDamageImages.length > 0) {
+        try {
+          const uploadResponse = await carService.uploadDamageImages(
+            unitId,
+            newDamageImages
+          );
+          setExistingDamageImages(uploadResponse.data.data);
+        } catch (uploadError) {
+          if (toastId) dismissToast(toastId);
+          handleSuccess('Vehicle unit updated');
+          handleError(
+            uploadError,
+            'Unit data was saved, but new damage image upload failed. Please retry.'
+          );
+          return;
+        }
+      }
 
       if (toastId) dismissToast(toastId);
       handleSuccess('Vehicle unit updated successfully');
@@ -109,7 +151,10 @@ export default function EditUnitPage() {
         <EditUnitForm
           form={form}
           loading={loading}
+          existingDamageImages={existingDamageImages}
+          deletingImageId={deletingImageId}
           onChange={setForm}
+          onDeleteExistingDamageImage={handleDeleteExistingDamageImage}
           onSubmit={handleSubmit}
           onCancel={() => router.push(`/staff/vehicle/${vehicleId}/unit`)}
         />

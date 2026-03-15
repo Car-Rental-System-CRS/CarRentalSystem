@@ -13,6 +13,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -28,12 +29,12 @@ import lombok.RequiredArgsConstructor;
 import main.dtos.APIResponse;
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarAvailabilityResponse;
+import main.dtos.response.CarResponse;
 import main.dtos.response.CarTypeResponse;
 import main.dtos.response.PageResponse;
 import main.entities.CarType;
 import main.services.CarTypeService;
 import main.specification.CarTypeSpecification;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/car-types")
@@ -51,7 +52,7 @@ public class CarTypeController {
         
         // Convert List to array for service method
         String[] imageDescriptions = imageDescriptionsList != null ? 
-            imageDescriptionsList.toArray(new String[0]) : new String[0];
+                        imageDescriptionsList.toArray(String[]::new) : new String[0];
         
         CarTypeResponse data = carTypeService.createType(request, images, imageDescriptions);
         return ResponseEntity.status(HttpStatus.CREATED).body(
@@ -94,13 +95,30 @@ public class CarTypeController {
         );
     }
 
+        @GetMapping("/{id}/available-cars")
+        public ResponseEntity<APIResponse<List<CarResponse>>> getAvailableCars(
+                        @PathVariable UUID id,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime pickupDateTime,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime returnDateTime
+        ) {
+                List<CarResponse> data = carTypeService.getAvailableCars(id, pickupDateTime, returnDateTime);
+                return ResponseEntity.ok(
+                                APIResponse.<List<CarResponse>>builder()
+                                                .success(true)
+                                                .message("OK")
+                                                .data(data)
+                                                .timestamp(Instant.now())
+                                                .build()
+                );
+        }
+
     @GetMapping
     public ResponseEntity<APIResponse<PageResponse<CarTypeResponse>>> getAll(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) Integer numberOfSeats,
-            @RequestParam(required = false) Double consumptionKwhPerKm,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "numberOfSeats", required = false) Integer numberOfSeats,
+            @RequestParam(value = "consumptionKwhPerKm", required = false) Double consumptionKwhPerKm,
+            @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
             Pageable pageable
     ) {
 
@@ -137,7 +155,7 @@ public class CarTypeController {
         
         // Convert List to array for service method
         String[] imageDescriptions = imageDescriptionsList != null ? 
-            imageDescriptionsList.toArray(new String[0]) : new String[0];
+                        imageDescriptionsList.toArray(String[]::new) : new String[0];
         
         CarTypeResponse data = carTypeService.updateType(id, request, images, imageDescriptions);
         return ResponseEntity.ok(
@@ -173,7 +191,7 @@ public class CarTypeController {
         
         // Convert List to array for service method
         String[] imageDescriptions = imageDescriptionsList != null ? 
-            imageDescriptionsList.toArray(new String[0]) : new String[0];
+                        imageDescriptionsList.toArray(String[]::new) : new String[0];
         
         CarTypeResponse data = carTypeService.addImagesToCarType(id, images, imageDescriptions);
         return ResponseEntity.ok(

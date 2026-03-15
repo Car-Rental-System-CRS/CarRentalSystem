@@ -1,12 +1,17 @@
 package main.dtos.response;
 
-import lombok.*;
-import main.enums.PaymentPurpose;
-import main.enums.PaymentStatus;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import main.enums.PaymentMethod;
+import main.enums.PaymentPurpose;
+import main.enums.PaymentStatus;
 
 @Getter
 @Setter
@@ -27,6 +32,7 @@ public class PaymentTransactionResponse {
 
     private PaymentStatus status;
     private PaymentPurpose purpose;
+    private PaymentMethod paymentMethod;
 
     private LocalDateTime createdAt;
     private LocalDateTime lastUpdatedAt;

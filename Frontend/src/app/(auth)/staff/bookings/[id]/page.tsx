@@ -9,12 +9,14 @@ import { handleError } from '@/lib/errorHandler';
 import {
   staffBookingService,
   AdminBookingResponse,
+  PostTripInspectionResponse,
 } from '@/services/staffBookingService';
 
 import BookingInfoCard from './components/BookingInfoCard';
 import BookingCarsCard from './components/BookingCarsCard';
 import BookingPriceCard from './components/BookingPriceCard';
 import BookingPaymentsCard from './components/BookingPaymentsCard';
+import BookingPostTripConditionCard from './components/BookingPostTripConditionCard';
 import BookingActions from './components/BookingActions';
 import OverdueAlert from './components/OverdueAlert';
 import GpsTracker from './components/GpsTracker';
@@ -24,7 +26,21 @@ export default function StaffBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
 
   const [booking, setBooking] = useState<AdminBookingResponse | null>(null);
+  const [inspection, setInspection] = useState<PostTripInspectionResponse | null>(null);
+  const [inspectionLoading, setInspectionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const fetchInspection = async (bookingId: string) => {
+    try {
+      setInspectionLoading(true);
+      const inspectionRes = await staffBookingService.getPostTripInspection(bookingId);
+      setInspection(inspectionRes.data.data);
+    } catch {
+      setInspection(null);
+    } finally {
+      setInspectionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -32,7 +48,14 @@ export default function StaffBookingDetailPage() {
       try {
         setLoading(true);
         const res = await staffBookingService.getById(id);
-        setBooking(res.data.data);
+        const fetchedBooking = res.data.data;
+        setBooking(fetchedBooking);
+
+        if (fetchedBooking.status === 'COMPLETED' || fetchedBooking.postTripInspectionCompleted) {
+          await fetchInspection(fetchedBooking.id);
+        } else {
+          setInspection(null);
+        }
       } catch (error) {
         handleError(error, 'Failed to load booking details');
       } finally {
@@ -63,8 +86,14 @@ export default function StaffBookingDetailPage() {
     );
   }
 
-  const handleBookingUpdated = (updated: AdminBookingResponse) => {
+  const handleBookingUpdated = async (updated: AdminBookingResponse) => {
     setBooking(updated);
+
+    if (updated.status === 'COMPLETED' || updated.postTripInspectionCompleted) {
+      await fetchInspection(updated.id);
+    } else {
+      setInspection(null);
+    }
   };
 
   return (
@@ -83,6 +112,11 @@ export default function StaffBookingDetailPage() {
         {/* Left column */}
         <div className="lg:col-span-2 space-y-6">
           <BookingInfoCard booking={booking} />
+          <BookingPostTripConditionCard
+            booking={booking}
+            inspection={inspection}
+            loading={inspectionLoading}
+          />
           <BookingCarsCard booking={booking} />
 
           {/* GPS Tracking — only during IN_PROGRESS */}

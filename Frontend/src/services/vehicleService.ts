@@ -67,6 +67,14 @@ export interface Car {
   licensePlate: string;
   importDate: string;
   typeId: string;
+  name?: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+  pricePerDay?: number;
+  quantity?: number;
+  imageUrl?: string;
+  damageImages?: MediaFile[];
 }
 
 // Car Type API
@@ -102,6 +110,23 @@ export const carTypeApi = {
   ): Promise<CarAvailabilityResponse> => {
     const response = await axiosInstance.get<APIResponse<CarAvailabilityResponse>>(
       `/api/car-types/${carTypeId}/availability`,
+      {
+        params: {
+          pickupDateTime: pickupDateTime.toISOString(),
+          returnDateTime: returnDateTime.toISOString(),
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  getAvailableCars: async (
+    carTypeId: string,
+    pickupDateTime: Date,
+    returnDateTime: Date
+  ): Promise<Car[]> => {
+    const response = await axiosInstance.get<APIResponse<Car[]>>(
+      `/api/car-types/${carTypeId}/available-cars`,
       {
         params: {
           pickupDateTime: pickupDateTime.toISOString(),

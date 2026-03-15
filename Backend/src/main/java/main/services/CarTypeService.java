@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarAvailabilityResponse;
+import main.dtos.response.CarResponse;
 import main.dtos.response.CarTypeResponse;
 import main.entities.CarType;
 
@@ -36,6 +37,11 @@ public interface CarTypeService {
      * Check car availability for a specific car type within a date range
      */
     CarAvailabilityResponse checkAvailability(UUID carTypeId, LocalDateTime pickupDateTime, LocalDateTime returnDateTime);
+
+        /**
+         * List available specific car units for renter selection.
+         */
+        List<CarResponse> getAvailableCars(UUID carTypeId, LocalDateTime pickupDateTime, LocalDateTime returnDateTime);
 
     List<CarType> getAllInventoryWithData();
 

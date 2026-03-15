@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import main.dtos.response.CarFeatureResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateCarTypeRequest;
 import main.dtos.response.CarAvailabilityResponse;
+import main.dtos.response.CarResponse;
 import main.dtos.response.CarTypeResponse;
 import main.entities.Car;
 import main.entities.CarBrand;
@@ -25,6 +25,7 @@ import main.entities.CarType;
 import main.entities.MediaFile;
 import main.entities.ModelFeature;
 import main.enums.BookingStatus;
+import main.mappers.CarMapper;
 import main.mappers.CarTypeMapper;
 import main.repositories.BookingCarRepository;
 import main.repositories.CarBrandRepository;
@@ -229,21 +230,7 @@ public class CarTypeServiceImpl implements CarTypeService {
                     .build();
         }
         
-        // Apply IDAER buffer (1 day before and after)
-        LocalDateTime bufferedPickup = pickupDateTime.minusDays(IDAER);
-        LocalDateTime bufferedReturn = returnDateTime.plusDays(IDAER);
-        
-        // Find unavailable cars (booked with blocking statuses)
-        List<UUID> carIds = allCars.stream().map(Car::getId).toList();
-        List<UUID> unavailableCarIds = bookingCarRepository.findUnavailableCarIds(
-                carIds,
-                bufferedPickup,
-                bufferedReturn,
-                BLOCKING_STATUSES
-        );
-        
-        // Calculate available count
-        int availableCount = totalCount - unavailableCarIds.size();
+        int availableCount = findAvailableCars(carTypeId, pickupDateTime, returnDateTime).size();
         
         return CarAvailabilityResponse.builder()
                 .carTypeId(carTypeId)
@@ -257,6 +244,44 @@ public class CarTypeServiceImpl implements CarTypeService {
                 .build();
     }
 
+    @Override
+    public List<CarResponse> getAvailableCars(UUID carTypeId, LocalDateTime pickupDateTime, LocalDateTime returnDateTime) {
+        if (!pickupDateTime.isBefore(returnDateTime)) {
+            throw new IllegalArgumentException("Return date must be after pickup date");
+        }
+
+        if (!carTypeRepository.existsById(carTypeId)) {
+            throw new IllegalArgumentException("Car type not found: " + carTypeId);
+        }
+
+        return findAvailableCars(carTypeId, pickupDateTime, returnDateTime).stream()
+                .map(CarMapper::toResponseWithDamageImages)
+                .toList();
+    }
+
+    private List<Car> findAvailableCars(UUID carTypeId, LocalDateTime pickupDateTime, LocalDateTime returnDateTime) {
+        List<Car> allCars = carRepository.findByCarTypeId(carTypeId);
+        if (allCars.isEmpty()) {
+            return List.of();
+        }
+
+        LocalDateTime bufferedPickup = pickupDateTime.minusDays(IDAER);
+        LocalDateTime bufferedReturn = returnDateTime.plusDays(IDAER);
+
+        List<UUID> carIds = allCars.stream().map(Car::getId).toList();
+        List<UUID> unavailableCarIds = bookingCarRepository.findUnavailableCarIds(
+                carIds,
+                bufferedPickup,
+                bufferedReturn,
+                BLOCKING_STATUSES
+        );
+
+        return allCars.stream()
+                .filter(car -> !unavailableCarIds.contains(car.getId()))
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<CarType> getAllInventoryWithData() {
         // 1. Fetch the bulk of the data

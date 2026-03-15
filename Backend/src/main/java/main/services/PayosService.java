@@ -6,9 +6,10 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import main.enums.PaymentPurpose;
 import vn.payos.model.webhooks.Webhook;
 
 public interface PayosService {
-    String createPaymentLink(long payosOrderCode, BigDecimal amount, UUID bookingId);
+    String createPaymentLink(long payosOrderCode, BigDecimal amount, UUID bookingId, PaymentPurpose purpose);
     ResponseEntity<String> handleWebhook(@RequestBody Webhook webhook);
 }

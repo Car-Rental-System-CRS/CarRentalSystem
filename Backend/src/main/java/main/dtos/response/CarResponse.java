@@ -2,6 +2,7 @@ package main.dtos.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -29,4 +30,5 @@ public class CarResponse {
     private BigDecimal pricePerDay; // from CarType.price
     private Integer quantity;      // default to 1 for single car
     private String imageUrl;       // from CarType.mediaFiles (first image)
+    private List<MediaFileResponse> damageImages;
 }

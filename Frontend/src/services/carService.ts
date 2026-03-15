@@ -1,7 +1,13 @@
 // src/services/carService.ts
 
 import axios from '@/lib/axios';
-import { Car, CreateCarPayload, GetAllCarParams } from '@/types/car';
+import {
+  Car,
+  CarDamageImage,
+  CreateCarPayload,
+  GetAllCarParams,
+} from '@/types/car';
+import { ImageWithDescription } from '@/types/carType';
 import { APIResponse } from '@/types/api';
 
 export const carService = {
@@ -37,6 +43,34 @@ export const carService = {
   /* ---------- UPDATE ---------- */
   update(id: string, payload: CreateCarPayload) {
     return axios.put<APIResponse<Car>>(`/api/cars/${id}`, payload);
+  },
+
+  uploadDamageImages(carId: string, imagesWithDescriptions: ImageWithDescription[]) {
+    const formData = new FormData();
+
+    imagesWithDescriptions.forEach((item) => {
+      formData.append('images', item.file);
+      formData.append('imageDescriptions', item.description || '');
+    });
+
+    return axios.post<APIResponse<CarDamageImage[]>>(
+      `/api/cars/${carId}/damage-images`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000,
+        maxContentLength: 50 * 1024 * 1024,
+        maxBodyLength: 50 * 1024 * 1024,
+      }
+    );
+  },
+
+  deleteDamageImage(carId: string, imageId: string) {
+    return axios.delete<APIResponse<void>>(
+      `/api/cars/${carId}/damage-images/${imageId}`
+    );
   },
 
   /* ---------- DELETE ---------- */

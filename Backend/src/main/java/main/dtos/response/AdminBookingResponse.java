@@ -34,6 +34,11 @@ public class AdminBookingResponse {
     private LocalDateTime actualReceiveDate;
     private LocalDateTime actualReturnDate;
 
+    private String pickupNotes;
+    private String returnNotes;
+    private LocalDateTime postTripInspectionAt;
+    private Boolean postTripInspectionCompleted;
+
     private BookingStatus status;
 
     private LocalDateTime createdAt;

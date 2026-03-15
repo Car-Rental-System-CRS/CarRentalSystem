@@ -12,6 +12,12 @@ public interface PaymentTransactionService {
     // Create a PayOS payment for a booking
     PaymentTransactionResponse createPayment(UUID bookingId, PaymentPurpose paymentPurpose, BigDecimal amount);
 
+    // Create or return an existing pending final payment (PayOS)
+    PaymentTransactionResponse createOrGetFinalPayment(UUID bookingId);
+
+    // Settle final payment via cash at branch
+    PaymentTransactionResponse settleFinalPaymentByCash(UUID bookingId);
+
     // Get payment transaction by id
     PaymentTransactionResponse getById(UUID paymentTransactionId);
 

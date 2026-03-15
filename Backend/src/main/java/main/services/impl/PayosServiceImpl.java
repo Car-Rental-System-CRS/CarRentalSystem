@@ -39,11 +39,12 @@ public class PayosServiceImpl implements PayosService {
     private String cancelPath;
 
     @Override
-    public String createPaymentLink(long payosOrderCode, BigDecimal amount, UUID bookingId) {
+    public String createPaymentLink(long payosOrderCode, BigDecimal amount, UUID bookingId, PaymentPurpose purpose) {
 
         try {
-            String returnUrl = frontendBaseUrl + successPath + "?bookingId=" + bookingId;
-            String cancelUrl = frontendBaseUrl + cancelPath + "?bookingId=" + bookingId;
+            String paymentPurpose = purpose != null ? purpose.name() : "BOOKING_PAYMENT";
+            String returnUrl = frontendBaseUrl + successPath + "?bookingId=" + bookingId + "&purpose=" + paymentPurpose;
+            String cancelUrl = frontendBaseUrl + cancelPath + "?bookingId=" + bookingId + "&purpose=" + paymentPurpose;
 
             CreatePaymentLinkRequest request =
                     CreatePaymentLinkRequest.builder()
@@ -99,11 +100,23 @@ public class PayosServiceImpl implements PayosService {
                 if (booking.getStatus() == BookingStatus.CREATED) {
                     booking.setStatus(BookingStatus.CONFIRMED);
                 }
-            } else if (purpose == PaymentPurpose.OVERDUE_PAYMENT) {
-                // Overdue payment — check if all pending payments are now paid, then COMPLETED
-                boolean allPaid = booking.getPaymentTransactions().stream()
-                        .allMatch(tx -> tx.getStatus() == PaymentStatus.PAID);
-                if (allPaid) {
+            } else if (purpose == PaymentPurpose.OVERDUE_PAYMENT || purpose == PaymentPurpose.FINAL_PAYMENT) {
+                BigDecimal remaining = booking.getRemainingAmount() == null
+                        ? BigDecimal.ZERO
+                        : booking.getRemainingAmount();
+                BigDecimal amount = transaction.getAmount() == null
+                        ? BigDecimal.ZERO
+                        : transaction.getAmount();
+
+                BigDecimal updatedRemaining = remaining.subtract(amount);
+                if (updatedRemaining.compareTo(BigDecimal.ZERO) < 0) {
+                    updatedRemaining = BigDecimal.ZERO;
+                }
+                booking.setRemainingAmount(updatedRemaining);
+
+                if (booking.getActualReturnDate() != null
+                        && updatedRemaining.compareTo(BigDecimal.ZERO) <= 0
+                        && Boolean.TRUE.equals(booking.getPostTripInspectionCompleted())) {
                     booking.setStatus(BookingStatus.COMPLETED);
                 }
             }

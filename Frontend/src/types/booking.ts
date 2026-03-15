@@ -1,9 +1,24 @@
+import { CarDamageImage } from './car';
+
 export interface BookingPayload {
   carTypeId: string;
   quantity: number;
+  selectedCarIds?: string[];
   expectedReceiveDate: string;
   expectedReturnDate: string;
   payNow: boolean;
+}
+
+export interface SelectedCarUnit {
+  id: string;
+  licensePlate: string;
+  importDate: string;
+  name?: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+  imageUrl?: string;
+  damageImages?: CarDamageImage[];
 }
 
 export interface CartItem {
@@ -19,6 +34,8 @@ export interface CartItem {
   totalDays: number;
   remainingHours: number;
   totalPrice: number;
+  selectedCarIds: string[];
+  selectedCars: SelectedCarUnit[];
   image?: string;
 }
 

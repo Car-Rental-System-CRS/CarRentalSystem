@@ -17,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,6 +56,14 @@ public class Booking extends AuditableEntity {
     private LocalDateTime actualReturnDate;
     private LocalDateTime expectedReceiveDate;
     private LocalDateTime expectedReturnDate;
+        private LocalDateTime postTripInspectionAt;
+        private Boolean postTripInspectionCompleted;
+
+        @Column(length = 1000)
+        private String pickupNotes;
+
+        @Column(length = 1000)
+        private String returnNotes;
 
     // Booking cars
     @OneToMany(
@@ -71,6 +80,9 @@ public class Booking extends AuditableEntity {
             orphanRemoval = true
     )
     private List<PaymentTransaction> paymentTransactions;
+
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private PostTripInspection postTripInspection;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -74,6 +74,12 @@ export function BookingCart() {
                   <span> × {item.quantity} car{item.quantity > 1 ? 's' : ''}</span>
                 </div>
 
+                {item.selectedCars?.length > 0 && (
+                  <div className="text-xs text-muted-foreground bg-muted/40 rounded p-2">
+                    Selected units: {item.selectedCars.map((car) => car.licensePlate).join(', ')}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="font-semibold">${item.totalPrice.toFixed(2)}</span>
                   <Link href={`/checkout?cartItemId=${encodeURIComponent(item.id)}`}>

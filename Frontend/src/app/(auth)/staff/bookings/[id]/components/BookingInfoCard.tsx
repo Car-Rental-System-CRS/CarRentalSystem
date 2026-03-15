@@ -117,6 +117,23 @@ export default function BookingInfoCard({ booking }: Props) {
       <div className="text-xs text-gray-400">
         Created: {formatDateTime(booking.createdAt)}
       </div>
+
+      {(booking.pickupNotes || booking.returnNotes) && (
+        <div className="pt-2 border-t border-gray-100 space-y-2">
+          {booking.pickupNotes && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 uppercase">Pickup Notes</h4>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{booking.pickupNotes}</p>
+            </div>
+          )}
+          {booking.returnNotes && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 uppercase">Return Notes</h4>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{booking.returnNotes}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

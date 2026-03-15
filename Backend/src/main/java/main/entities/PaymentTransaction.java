@@ -19,6 +19,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import main.enums.PaymentMethod;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
 
@@ -29,7 +30,7 @@ import main.enums.PaymentStatus;
 @Getter
 @Builder
 @Table(name = "payment_transactions")
-public class PaymentTransaction {
+public class PaymentTransaction extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -45,6 +46,10 @@ public class PaymentTransaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentPurpose purpose;
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    private PaymentMethod paymentMethod;
 
     private BigDecimal amount; // VND
 

@@ -1,0 +1,188 @@
+@startuml Pickup Return Backend Sequence (Code Verified)
+
+title Pickup and Return Flow (Backend Code Verified)
+autonumber
+
+actor "Rentors" as R
+actor "Staff" as S
+participant "PayOS Gateway (External)" as PG
+
+participant ":StaffBookingController" as StaffBookingController
+participant "BookingServiceImpl:BookingService" as BookingService
+participant ":BookingRepository" as BookingRepository
+participant ":BookingCarRepository" as BookingCarRepository
+participant ":PostTripInspectionRepository" as PostTripInspectionRepository
+participant ":PaymentTransactionRepository" as PaymentTransactionRepository
+participant ":AccountRepository" as AccountRepository
+participant ":MediaFileRepository" as MediaFileRepository
+
+participant "PaymentTransactionServiceImpl:PaymentTransactionService" as PaymentTransactionService
+participant ":PaymentTransactionController" as PaymentTransactionController
+participant ":PayosWebhookController" as PayosWebhookController
+participant "PayosServiceImpl:PayosService" as PayosService
+
+note over BookingService,PayosService
+Service participants are interfaces only.
+Repository calls are executed by service implementations.
+end note
+
+== Pickup at Rental Location ==
+R -> S: Arrive for pickup
+S -> StaffBookingController: PUT /api/staff/bookings/{bookingId}/confirm-pickup
+StaffBookingController -> BookingService: confirmPickup(bookingId, pickupNotes)
+BookingService -> BookingRepository: findById(bookingId)
+BookingRepository --> BookingService: Booking
+BookingService -> BookingRepository: save(status=IN_PROGRESS, actualReceiveDate, pickupNotes)
+BookingRepository --> BookingService: Booking
+BookingService --> StaffBookingController: AdminBookingResponse
+StaffBookingController --> S: 200 OK
+
+note right of BookingService
+No dedicated backend endpoint exists for identity verification
+or handover signature; notes are captured via pickupNotes.
+end note
+
+== Vehicle Return ==
+R -> S: Return vehicle
+S -> StaffBookingController: PUT /api/staff/bookings/{bookingId}/confirm-return
+StaffBookingController -> BookingService: confirmReturn(bookingId, returnNotes)
+BookingService -> BookingRepository: findById(bookingId)
+BookingRepository --> BookingService: Booking
+
+alt Returned after expectedReturnDate
+  BookingService -> BookingCarRepository: findByBookingId(bookingId)
+  BookingCarRepository --> BookingService: List<BookingCar>
+  BookingService -> BookingRepository: save(actualReturnDate, overdueCharge, remainingAmount, status=IN_PROGRESS)
+  BookingRepository --> BookingService: Booking
+else Returned on time
+  BookingService -> BookingRepository: save(actualReturnDate, status=IN_PROGRESS)
+  BookingRepository --> BookingService: Booking
+end
+
+BookingService --> StaffBookingController: AdminBookingResponse
+StaffBookingController --> S: 200 OK
+
+== Post-Trip Inspection and Damage Capture ==
+S -> StaffBookingController: POST /api/staff/bookings/{bookingId}/cars/{carId}/post-trip-damage-images
+StaffBookingController -> BookingService: uploadPostTripDamageImages(bookingId, carId, images, descriptions)
+BookingService -> BookingRepository: findById(bookingId)
+BookingRepository --> BookingService: Booking
+BookingService -> BookingCarRepository: findByBookingId(bookingId)
+BookingCarRepository --> BookingService: List<BookingCar>
+BookingService --> StaffBookingController: List<MediaFileResponse>
+StaffBookingController --> S: 200 OK
+
+S -> StaffBookingController: PUT /api/staff/bookings/{bookingId}/post-trip-inspection
+StaffBookingController -> BookingService: upsertPostTripInspection(bookingId, request, inspectorAccountId)
+BookingService -> BookingRepository: findById(bookingId)
+BookingRepository --> BookingService: Booking
+BookingService -> BookingCarRepository: findByBookingId(bookingId)
+BookingCarRepository --> BookingService: List<BookingCar>
+BookingService -> PostTripInspectionRepository: findByBookingId(bookingId)
+PostTripInspectionRepository --> BookingService: Optional<PostTripInspection>
+
+opt inspectorAccountId is present
+  BookingService -> AccountRepository: findById(inspectorAccountId)
+  AccountRepository --> BookingService: Optional<Account>
+end
+
+opt request contains damageImageIds
+  BookingService -> MediaFileRepository: findAllById(damageImageIds)
+  MediaFileRepository --> BookingService: List<MediaFile>
+end
+
+BookingService -> PostTripInspectionRepository: save(inspection)
+PostTripInspectionRepository --> BookingService: PostTripInspection
+BookingService -> BookingRepository: save(postTripInspectionCompleted=true, postTripInspectionAt)
+BookingRepository --> BookingService: Booking
+BookingService --> StaffBookingController: PostTripInspectionResponse
+StaffBookingController --> S: 200 OK
+
+== Settlement Decision ==
+alt Cash settlement at branch
+  S -> StaffBookingController: POST /api/staff/bookings/{bookingId}/settle-cash
+  StaffBookingController -> BookingService: settleFinalPaymentByCash(bookingId)
+  BookingService -> BookingRepository: findById(bookingId)
+  BookingRepository --> BookingService: Booking
+  BookingService -> PaymentTransactionService: settleFinalPaymentByCash(bookingId)
+
+  PaymentTransactionService -> BookingRepository: findById(bookingId)
+  BookingRepository --> PaymentTransactionService: Booking
+  PaymentTransactionService -> PaymentTransactionRepository: findFirstByBooking_IdAndPurposeAndStatusOrderByCreatedAtDesc(...FINAL_PAYMENT, PENDING)
+  PaymentTransactionRepository --> PaymentTransactionService: Optional<PaymentTransaction>
+  PaymentTransactionService -> PaymentTransactionRepository: save(cash FINAL_PAYMENT, status=PAID)
+  PaymentTransactionRepository --> PaymentTransactionService: PaymentTransaction
+  PaymentTransactionService -> BookingRepository: save(remainingAmount=0, status=COMPLETED)
+  BookingRepository --> PaymentTransactionService: Booking
+
+  PaymentTransactionService --> BookingService: PaymentTransactionResponse
+  BookingService --> StaffBookingController: PaymentTransactionResponse
+  StaffBookingController --> S: 200 OK
+else Online settlement via PayOS
+  S -> StaffBookingController: POST /api/staff/bookings/{bookingId}/final-payment
+  StaffBookingController -> BookingService: createFinalPayment(bookingId)
+  BookingService -> BookingRepository: findById(bookingId)
+  BookingRepository --> BookingService: Booking
+  BookingService -> PaymentTransactionService: createOrGetFinalPayment(bookingId)
+
+  PaymentTransactionService -> BookingRepository: findById(bookingId)
+  BookingRepository --> PaymentTransactionService: Booking
+  PaymentTransactionService -> PaymentTransactionRepository: findFirstByBooking_IdAndPurposeAndStatusOrderByCreatedAtDesc(...FINAL_PAYMENT, PENDING)
+  PaymentTransactionRepository --> PaymentTransactionService: Optional<PaymentTransaction>
+
+  alt No pending FINAL_PAYMENT exists
+    PaymentTransactionService -> PayosService: createPaymentLink(orderCode, amount, bookingId, FINAL_PAYMENT)
+    PayosService --> PaymentTransactionService: checkoutUrl
+    PaymentTransactionService -> PaymentTransactionRepository: save(status=PENDING, paymentUrl)
+    PaymentTransactionRepository --> PaymentTransactionService: PaymentTransaction
+  else Pending FINAL_PAYMENT exists
+    PaymentTransactionService --> BookingService: existing pending transaction
+  end
+
+  PaymentTransactionService --> BookingService: PaymentTransactionResponse
+  BookingService --> StaffBookingController: PaymentTransactionResponse
+  StaffBookingController --> S: 200 OK + paymentUrl
+
+  S -> R: Share/ask renter to complete final payment
+  R -> PG: Complete payment on checkout URL
+
+  PG -> PayosWebhookController: POST /api/payos/webhook
+  PayosWebhookController -> PayosService: handleWebhook(webhook)
+  PayosService -> PaymentTransactionRepository: findByPayOSPaymentCode(orderCode)
+  PaymentTransactionRepository --> PayosService: Optional<PaymentTransaction>
+
+  alt Transaction exists and not PAID
+    PayosService -> PaymentTransactionRepository: save(transaction status=PAID)
+    PaymentTransactionRepository --> PayosService: PaymentTransaction
+    note right of PayosService
+    Booking is marked COMPLETED only when:
+    actualReturnDate != null,
+    remainingAmount <= 0,
+    postTripInspectionCompleted == true.
+    end note
+  else Not found or already PAID
+    note right of PayosService
+    Returns 200 OK for idempotency/retry safety.
+    end note
+  end
+
+  PayosService --> PayosWebhookController: ResponseEntity("OK")
+  PayosWebhookController --> PG: 200 OK
+end
+
+== Renter Checks Final Receipt/Status ==
+R -> PaymentTransactionController: GET /api/payments/booking/{bookingId}
+PaymentTransactionController -> PaymentTransactionService: getAllByBookingId(bookingId)
+PaymentTransactionService -> PaymentTransactionRepository: findByBooking_Id(bookingId)
+PaymentTransactionRepository --> PaymentTransactionService: List<PaymentTransaction>
+PaymentTransactionService --> PaymentTransactionController: List<PaymentTransactionResponse>
+PaymentTransactionController --> R: 200 OK
+
+R -> PaymentTransactionController: GET /api/payments/booking/{bookingId}/latest
+PaymentTransactionController -> PaymentTransactionService: getLatestByBookingId(bookingId)
+PaymentTransactionService -> PaymentTransactionRepository: findFirstByBooking_IdOrderByCreatedAtDesc(bookingId)
+PaymentTransactionRepository --> PaymentTransactionService: Optional<PaymentTransaction>
+PaymentTransactionService --> PaymentTransactionController: PaymentTransactionResponse
+PaymentTransactionController --> R: 200 OK
+
+@enduml

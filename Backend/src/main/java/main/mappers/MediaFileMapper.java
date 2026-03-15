@@ -18,6 +18,8 @@ public class MediaFileMapper {
                 .fileSize(entity.getFileSize())
                 .description(entity.getDescription())
                 .displayOrder(entity.getDisplayOrder())
+            .damageSource(entity.getDamageSource())
+            .sourceBookingId(entity.getSourceBookingId())
                 .createdAt(entity.getCreatedAt())
                 .modifiedAt(entity.getModifiedAt())
                 .build();

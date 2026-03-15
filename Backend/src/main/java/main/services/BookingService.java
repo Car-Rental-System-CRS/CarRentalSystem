@@ -6,10 +6,15 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.multipart.MultipartFile;
 
 import main.dtos.request.CreateBookingRequest;
+import main.dtos.request.StaffPostTripInspectionRequest;
 import main.dtos.response.AdminBookingResponse;
 import main.dtos.response.BookingResponse;
+import main.dtos.response.MediaFileResponse;
+import main.dtos.response.PaymentTransactionResponse;
+import main.dtos.response.PostTripInspectionResponse;
 import main.entities.Booking;
 
 public interface BookingService {
@@ -33,8 +38,23 @@ public interface BookingService {
     AdminBookingResponse getAdminBookingById(UUID bookingId);
 
     // Confirm car pickup — CONFIRMED → IN_PROGRESS
-    AdminBookingResponse confirmPickup(UUID bookingId);
+    AdminBookingResponse confirmPickup(UUID bookingId, String pickupNotes);
 
     // Confirm car return — IN_PROGRESS → COMPLETED (or pending overdue payment)
-    AdminBookingResponse confirmReturn(UUID bookingId);
+    AdminBookingResponse confirmReturn(UUID bookingId, String returnNotes);
+
+    // Generate final payment link (PayOS) after return is recorded
+    PaymentTransactionResponse createFinalPayment(UUID bookingId);
+
+    // Record final payment via cash and complete booking when eligible
+    PaymentTransactionResponse settleFinalPaymentByCash(UUID bookingId);
+
+    // Upsert post-trip inspection report (single report per booking)
+    PostTripInspectionResponse upsertPostTripInspection(UUID bookingId, StaffPostTripInspectionRequest request, UUID inspectorAccountId);
+
+    // Upload post-trip damage evidence for a booked car under booking scope
+    List<MediaFileResponse> uploadPostTripDamageImages(UUID bookingId, UUID carId, MultipartFile[] images, String[] imageDescriptions);
+
+    // Get post-trip inspection report by booking id
+    PostTripInspectionResponse getPostTripInspection(UUID bookingId);
 }

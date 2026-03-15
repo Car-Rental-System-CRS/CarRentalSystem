@@ -36,6 +36,9 @@ public class BookingResponse {
     private LocalDateTime actualReceiveDate;
     private LocalDateTime actualReturnDate;
 
+    private String pickupNotes;
+    private String returnNotes;
+
     private BookingStatus status;
 
     private LocalDateTime createdAt;

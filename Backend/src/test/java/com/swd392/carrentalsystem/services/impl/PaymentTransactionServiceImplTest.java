@@ -1,5 +1,26 @@
 package com.swd392.carrentalsystem.services.impl;
 
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import main.dtos.response.PaymentTransactionResponse;
 import main.entities.Booking;
 import main.entities.PaymentTransaction;
@@ -10,18 +31,6 @@ import main.repositories.BookingRepository;
 import main.repositories.PaymentTransactionRepository;
 import main.services.PayosService;
 import main.services.impl.PaymentTransactionServiceImpl;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentTransactionServiceImplTest {
@@ -41,8 +50,6 @@ class PaymentTransactionServiceImplTest {
     @InjectMocks
     private PaymentTransactionServiceImpl paymentTransactionService;
 
-
-
     @Test
     void createPayment_ShouldCreatePendingTransactionAndReturnPaymentUrl() {
 
@@ -52,6 +59,7 @@ class PaymentTransactionServiceImplTest {
         PaymentPurpose purpose = PaymentPurpose.BOOKING_PAYMENT;
 
         Booking booking = new Booking();
+        booking.setId(bookingId);
 
         PaymentTransaction transaction = PaymentTransaction.builder()
                 .booking(booking)
@@ -64,6 +72,7 @@ class PaymentTransactionServiceImplTest {
                 new PaymentTransactionResponse();
 
         String paymentUrl = "https://payos.test/checkout";
+        response.setPaymentUrl(paymentUrl);
 
         when(bookingRepository.findById(bookingId))
                 .thenReturn(Optional.of(booking));
@@ -71,10 +80,10 @@ class PaymentTransactionServiceImplTest {
         when(paymentTransactionRepository.save(any(PaymentTransaction.class)))
                 .thenReturn(transaction);
 
-        when(payosService.createPaymentLink(anyLong(), eq(amount), eq(bookingId)))
+        when(payosService.createPaymentLink(anyLong(), eq(amount), eq(bookingId), eq(purpose)))
                 .thenReturn(paymentUrl);
 
-        when(paymentTransactionMapper.toPaymentTransactionResponse(transaction))
+        when(paymentTransactionMapper.toPaymentTransactionResponse(any(PaymentTransaction.class)))
                 .thenReturn(response);
 
         // Act
@@ -91,7 +100,24 @@ class PaymentTransactionServiceImplTest {
 
         verify(bookingRepository).findById(bookingId);
         verify(paymentTransactionRepository).save(any(PaymentTransaction.class));
-        verify(payosService).createPaymentLink(anyLong(), eq(amount), eq(bookingId));
+        verify(payosService).createPaymentLink(anyLong(), eq(amount), eq(bookingId), eq(purpose));
+    }
+
+    @Test
+    void createPayment_ShouldRejectOverduePurposeForNewFlow() {
+        UUID bookingId = UUID.randomUUID();
+        BigDecimal amount = BigDecimal.valueOf(500_000);
+
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(new Booking()));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> paymentTransactionService.createPayment(bookingId, PaymentPurpose.OVERDUE_PAYMENT, amount)
+        );
+
+        assertTrue(ex.getMessage().contains("OVERDUE_PAYMENT is no longer created"));
+        verify(paymentTransactionRepository, never()).save(any(PaymentTransaction.class));
+        verifyNoInteractions(payosService);
     }
 }
 

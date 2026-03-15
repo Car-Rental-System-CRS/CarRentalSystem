@@ -52,6 +52,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           ...item,
           pickupDateTime: new Date(item.pickupDateTime),
           returnDateTime: new Date(item.returnDateTime),
+          selectedCarIds: item.selectedCarIds || [],
+          selectedCars: item.selectedCars || [],
         }));
         setCartItems(items);
       }
@@ -76,15 +78,6 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     (item: Omit<CartItem, 'id'>): boolean => {
       const id = generateCartItemId(item.carTypeId, item.pickupDateTime, item.returnDateTime);
 
-      // Check if already exists
-      const existing = cartItems.find((i) => i.id === id);
-      if (existing) {
-        toast.error('This booking already exists in your cart', {
-          description: 'Same car type with same pickup and return time is already added.',
-        });
-        return false;
-      }
-
       // Validate minimum 5 hours
       const hours = (item.returnDateTime.getTime() - item.pickupDateTime.getTime()) / (1000 * 60 * 60);
       if (hours < MINIMUM_RENTAL_HOURS) {
@@ -96,9 +89,21 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
       // Add to cart
       const newItem: CartItem = { ...item, id };
-      setCartItems((prev) => [...prev, newItem]);
-      toast.success('Added to cart', {
-        description: `${item.carTypeName} (${item.quantity} car${item.quantity > 1 ? 's' : ''}) has been added.`,
+      const existing = cartItems.find((i) => i.id === id);
+
+      setCartItems((prev) => {
+        const index = prev.findIndex((i) => i.id === id);
+        if (index === -1) {
+          return [...prev, newItem];
+        }
+
+        const updated = [...prev];
+        updated[index] = newItem;
+        return updated;
+      });
+
+      toast.success(existing ? 'Booking selection updated' : 'Added to cart', {
+        description: `${item.carTypeName} (${item.quantity} car${item.quantity > 1 ? 's' : ''}) has been saved.`,
       });
       return true;
     },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -9,17 +9,57 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Loader2, Calendar, CreditCard, Car, AlertCircle } from 'lucide-react';
 import { getBookingById, type BookingResponse } from '@/services/bookingService';
-import { getLatestPaymentByBookingId, type PaymentTransactionResponse } from '@/services/paymentService';
+import {
+  getAllPaymentsByBookingId,
+  getLatestPaymentByBookingId,
+  type PaymentTransactionResponse,
+} from '@/services/paymentService';
 import { handleError } from '@/lib/errorHandler';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { PaymentStatusBadge } from '@/components/PaymentStatusBadge';
 import { BookingStatusBadge } from '@/components/BookingStatusBadge';
 
+type PaymentPurpose = PaymentTransactionResponse['purpose'];
+
+const PAYMENT_PURPOSES: PaymentPurpose[] = ['BOOKING_PAYMENT', 'FINAL_PAYMENT', 'OVERDUE_PAYMENT'];
+
+const toPaymentPurpose = (value: string | null): PaymentPurpose | null => {
+  if (!value) return null;
+  return PAYMENT_PURPOSES.includes(value as PaymentPurpose) ? (value as PaymentPurpose) : null;
+};
+
+const sortPaymentsByCreatedAtDesc = (payments: PaymentTransactionResponse[]) =>
+  [...payments].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+const pickPaymentForSuccessPage = (
+  payments: PaymentTransactionResponse[],
+  preferredPurpose: PaymentPurpose | null
+): PaymentTransactionResponse | null => {
+  if (payments.length === 0) return null;
+
+  const sorted = sortPaymentsByCreatedAtDesc(payments);
+
+  if (preferredPurpose) {
+    const paidMatch = sorted.find(
+      (payment) => payment.purpose === preferredPurpose && payment.status === 'PAID'
+    );
+    if (paidMatch) return paidMatch;
+
+    const anyMatch = sorted.find((payment) => payment.purpose === preferredPurpose);
+    if (anyMatch) return anyMatch;
+  }
+
+  const latestPaid = sorted.find((payment) => payment.status === 'PAID');
+  return latestPaid ?? sorted[0];
+};
+
 export default function PaymentSuccessClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get('bookingId');
+  const purposeFromQuery = toPaymentPurpose(searchParams.get('purpose'));
   const { data: session, status: sessionStatus } = useSession();
   
   const [loading, setLoading] = useState(true);
@@ -52,8 +92,14 @@ export default function PaymentSuccessClient() {
         const bookingData = await getBookingById(bookingId);
         setBooking(bookingData);
 
-        // Fetch latest payment
-        const paymentData = await getLatestPaymentByBookingId(bookingId);
+        // Resolve the correct payment to display for this success page.
+        const allPayments = await getAllPaymentsByBookingId(bookingId);
+        let paymentData = pickPaymentForSuccessPage(allPayments, purposeFromQuery);
+
+        if (!paymentData) {
+          paymentData = await getLatestPaymentByBookingId(bookingId);
+        }
+
         setPayment(paymentData);
 
         // Check if payment is successful
@@ -69,7 +115,7 @@ export default function PaymentSuccessClient() {
     };
 
     verifyPayment();
-  }, [bookingId, session, sessionStatus]);
+  }, [bookingId, purposeFromQuery, session, sessionStatus]);
 
   if (loading) {
     return (
@@ -113,7 +159,26 @@ export default function PaymentSuccessClient() {
     );
   }
 
-  const isPaid = payment.status === 'PAID';
+  const paidPurpose = purposeFromQuery ?? payment.purpose;
+  const isFinalChargePayment =
+    paidPurpose === 'FINAL_PAYMENT' || paidPurpose === 'OVERDUE_PAYMENT';
+  const successTitle = isFinalChargePayment
+    ? 'Final Settlement Payment Successful!'
+    : 'Reservation Payment Successful!';
+  const successDescription = isFinalChargePayment
+    ? 'Your post-trip settlement payment has been completed.'
+    : 'Thank you for your booking. Your reservation is confirmed.';
+  const nextSteps = isFinalChargePayment
+    ? [
+        'No further payment is required for this booking.',
+        'You can review the final receipt and booking details in My Bookings.',
+        'Contact support if you see any mismatch in the final charge.',
+      ]
+    : [
+        "Please bring a valid ID and driver's license when picking up the vehicle",
+        'Arrive at least 15 minutes before your scheduled pickup time',
+        'Contact us if you need to modify or cancel your booking',
+      ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -123,10 +188,8 @@ export default function PaymentSuccessClient() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-4xl font-bold mb-2">Payment Successful!</h1>
-          <p className="text-xl text-muted-foreground">
-            Thank you for your booking. Your reservation is confirmed.
-          </p>
+          <h1 className="text-4xl font-bold mb-2">{successTitle}</h1>
+          <p className="text-xl text-muted-foreground">{successDescription}</p>
         </div>
 
         {/* Booking Details */}
@@ -221,6 +284,19 @@ export default function PaymentSuccessClient() {
 
             <Separator />
 
+            <div>
+              <p className="text-sm text-muted-foreground">Payment Purpose</p>
+              <p className="font-semibold">
+                {payment.purpose === 'BOOKING_PAYMENT'
+                  ? 'Reservation Deposit'
+                  : payment.purpose === 'FINAL_PAYMENT'
+                  ? 'Final Charge'
+                  : 'Overdue Charge'}
+              </p>
+            </div>
+
+            <Separator />
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Payment Code</p>
@@ -260,9 +336,9 @@ export default function PaymentSuccessClient() {
           <CardContent className="pt-6">
             <h3 className="font-semibold mb-2">What's Next?</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Please bring a valid ID and driver's license when picking up the vehicle</li>
-              <li>• Arrive at least 15 minutes before your scheduled pickup time</li>
-              <li>• Contact us if you need to modify or cancel your booking</li>
+              {nextSteps.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
             </ul>
           </CardContent>
         </Card>

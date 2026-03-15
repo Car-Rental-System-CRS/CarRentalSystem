@@ -3,13 +3,29 @@ import axiosInstance from '@/lib/axios';
 export interface CreateBookingRequest {
   carTypeId: string;
   quantity: number;
+  selectedCarIds?: string[];
   expectedReceiveDate: string; // ISO datetime format
   expectedReturnDate: string; // ISO datetime format
   payNow: boolean;
 }
 
+export interface MediaFileResponse {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  description?: string;
+  displayOrder?: number;
+  createdAt?: string;
+  modifiedAt?: string;
+}
+
 export interface CarResponse {
   id: string;
+  licensePlate: string;
+  importDate: string;
+  typeId: string;
   name: string;
   brand: string;
   model: string;
@@ -17,6 +33,7 @@ export interface CarResponse {
   pricePerDay: number;
   quantity: number;
   imageUrl?: string;
+  damageImages?: MediaFileResponse[];
 }
 
 export interface PaymentTransactionResponse {
@@ -24,9 +41,10 @@ export interface PaymentTransactionResponse {
   bookingId: string;
   amount: number;
   payOSPaymentCode: number;
-  paymentUrl: string;
+  paymentUrl: string | null;
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
   purpose: 'BOOKING_PAYMENT' | 'FINAL_PAYMENT' | 'OVERDUE_PAYMENT';
+  paymentMethod: 'PAYOS' | 'CASH';
   createdAt: string;
   lastUpdatedAt: string;
 }

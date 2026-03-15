@@ -249,6 +249,9 @@ export default function BookingDetailsPage() {
                           Transaction ID: #{payment.id.substring(0, 12)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
+                          Method: {payment.paymentMethod}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
                           {formatDateTime(payment.createdAt)}
                         </p>
                       </div>
@@ -256,7 +259,7 @@ export default function BookingDetailsPage() {
                         <p className="text-lg font-bold text-gray-900">
                           {formatCurrency(payment.amount)}
                         </p>
-                        {payment.status === 'PENDING' && payment.paymentUrl && (
+                        {payment.status === 'PENDING' && payment.paymentMethod === 'PAYOS' && payment.paymentUrl && (
                           <a
                             href={payment.paymentUrl}
                             target="_blank"

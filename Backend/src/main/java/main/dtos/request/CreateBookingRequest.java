@@ -1,6 +1,7 @@
 package main.dtos.request;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -20,6 +21,10 @@ public class CreateBookingRequest {
     
     // Number of cars to book
     private int quantity;
+
+    // Optional explicit selection from renter flow.
+    // If provided, quantity is derived from this list.
+    private List<UUID> selectedCarIds;
 
     private LocalDateTime expectedReceiveDate;
     private LocalDateTime expectedReturnDate;

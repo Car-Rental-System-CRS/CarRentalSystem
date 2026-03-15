@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import AddUnitForm, { AddUnitFormState } from './components/AddUnitForm';
 import { carService } from '@/services/carService';
+import { ImageWithDescription } from '@/types/carType';
 
 import {
   handleError,
@@ -30,7 +31,10 @@ export default function AddUnitPage() {
   });
 
   /* ---------- CREATE ---------- */
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = async (
+    e: React.FormEvent,
+    damageImages: ImageWithDescription[]
+  ) => {
     e.preventDefault();
 
     let toastId: string | number | null = null;
@@ -39,11 +43,28 @@ export default function AddUnitPage() {
       setLoading(true);
       toastId = showLoading('Creating vehicle unit...');
 
-      await carService.create({
+      const createResponse = await carService.create({
         licensePlate: form.license,
         importDate: form.importDate,
         typeId,
       });
+
+      const createdCarId = createResponse.data.data.id;
+
+      if (damageImages.length > 0) {
+        try {
+          await carService.uploadDamageImages(createdCarId, damageImages);
+        } catch (uploadError) {
+          if (toastId) dismissToast(toastId);
+          handleSuccess('Vehicle unit created with warning');
+          handleError(
+            uploadError,
+            'Vehicle unit was created, but damage image upload failed. Please retry from edit page.'
+          );
+          router.push(`/staff/vehicle/${typeId}/unit/${createdCarId}/edit`);
+          return;
+        }
+      }
 
       if (toastId) dismissToast(toastId);
       handleSuccess('Vehicle unit created successfully');

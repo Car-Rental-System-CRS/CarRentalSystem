@@ -1,5 +1,6 @@
 package main.configs;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -8,16 +9,19 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import main.entities.Account;
 import main.entities.CustomRole;
 import main.entities.CustomRoleScope;
 import main.enums.Role;
 import main.enums.Scope;
+import main.repositories.AccountRepository;
 import main.repositories.CustomRoleRepository;
 
 @Component
@@ -26,7 +30,11 @@ import main.repositories.CustomRoleRepository;
 public class DataSeeder implements CommandLineRunner {
 
     private final CustomRoleRepository customRoleRepository;
+    private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
+
+    private static final String DEFAULT_SEEDED_PASSWORD = "password";
 
     @Override
     @Transactional
@@ -36,6 +44,31 @@ public class DataSeeder implements CommandLineRunner {
 
         seedDefaultRole("Default Admin", Role.ADMIN,
                 Arrays.stream(Scope.values()).filter(Scope::isAdminScope).collect(Collectors.toList()));
+
+        seedDefaultAccount("System Admin", "admin@gmail.com", Role.ADMIN, "0900000001");
+        seedDefaultAccount("Staff Lead", "staff@gmail.com", Role.STAFF, "0900000002");
+    }
+
+    private void seedDefaultAccount(String name, String email, Role role, String phone) {
+        String normalizedEmail = email.toLowerCase();
+        if (accountRepository.existsByEmail(normalizedEmail)) {
+            log.info("Default account '{}' already exists, skipping.", normalizedEmail);
+            return;
+        }
+
+        byte[] encodedPassword = passwordEncoder.encode(DEFAULT_SEEDED_PASSWORD)
+                .getBytes(StandardCharsets.UTF_8);
+
+        Account account = Account.builder()
+                .name(name)
+                .email(normalizedEmail)
+                .role(role)
+                .phone(phone)
+                .password(encodedPassword)
+                .build();
+
+        accountRepository.save(account);
+        log.info("Seeded default {} account '{}'.", role, normalizedEmail);
     }
 
     private void seedDefaultRole(String name, Role baseRole, List<Scope> scopes) {

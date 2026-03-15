@@ -5,6 +5,7 @@ import main.dtos.response.CarTypeResponse;
 import main.entities.CarBrand;
 import main.entities.CarType;
 import main.entities.ModelFeature;
+import main.enums.MediaCategory;
 
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -48,6 +49,8 @@ public class CarTypeMapper {
                 .carBrand(carBrandMapper.toResponse(entity.getCarBrand()))
                 .mediaFiles(entity.getMediaFiles() != null 
                         ? entity.getMediaFiles().stream()
+                                .filter(mediaFile -> mediaFile.getMediaCategory() == null
+                                        || mediaFile.getMediaCategory() == MediaCategory.CAR_TYPE_IMAGE)
                                 .map(MediaFileMapper::toResponse)
                                 .collect(Collectors.toList())
                         : Collections.emptyList())
@@ -68,6 +71,8 @@ public class CarTypeMapper {
                 .carBrand(carBrandMapper.toResponse(entity.getCarBrand()))
                 .mediaFiles(entity.getMediaFiles() != null 
                         ? entity.getMediaFiles().stream()
+                                .filter(mediaFile -> mediaFile.getMediaCategory() == null
+                                        || mediaFile.getMediaCategory() == MediaCategory.CAR_TYPE_IMAGE)
                                 .map(MediaFileMapper::toResponse)
                                 .collect(Collectors.toList())
                         : Collections.emptyList())

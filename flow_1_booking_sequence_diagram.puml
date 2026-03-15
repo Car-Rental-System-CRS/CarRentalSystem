@@ -1,0 +1,156 @@
+@startuml Booking Backend Sequence (Code Verified)
+
+title Booking Flow (Backend Code Verified)
+autonumber
+
+actor "Rentors" as R
+
+participant ":CarTypeController" as CarTypeController
+participant "CarTypeServiceImpl:CarTypeService" as CarTypeService
+participant ":CarTypeRepository" as CarTypeRepository
+participant ":CarRepository" as CarRepository
+participant ":BookingCarRepository" as BookingCarRepository
+
+participant ":ChatController" as ChatController
+participant "ChatServiceImpl:ChatService" as ChatService
+
+participant ":BookingController" as BookingController
+participant "BookingServiceImpl:BookingService" as BookingService
+participant ":AccountRepository" as AccountRepository
+participant ":BookingRepository" as BookingRepository
+participant "PaymentTransactionServiceImpl:PaymentTransactionService" as PaymentTransactionService
+participant ":PaymentTransactionRepository" as PaymentTransactionRepository
+
+participant ":PaymentTransactionController" as PaymentTransactionController
+participant ":PayosWebhookController" as PayosWebhookController
+participant "PayosServiceImpl:PayosService" as PayosService
+participant ":PayOS Gateway (External)" as PayOS
+
+note over CarTypeService,BookingService
+Repository interactions are executed in service implementations
+(CarTypeServiceImpl, BookingServiceImpl, PaymentTransactionServiceImpl, PayosServiceImpl),
+and participants are displayed as Implementation:Interface.
+end note
+
+== Search Vehicles and Check Availability ==
+R -> CarTypeController: GET /api/car-types/{id}/availability(pickupDateTime, returnDateTime)
+CarTypeController -> CarTypeService: checkAvailability(id, pickup, return)
+CarTypeService -> CarTypeRepository: findById(id)
+CarTypeRepository --> CarTypeService: CarType
+CarTypeService -> CarRepository: findByCarTypeId(id)
+CarRepository --> CarTypeService: List<Car>
+CarTypeService -> BookingCarRepository: findUnavailableCarIds(carIds, bufferedPickup, bufferedReturn, BLOCKING_STATUSES)
+BookingCarRepository --> CarTypeService: List<UUID> unavailableCarIds
+CarTypeService --> CarTypeController: CarAvailabilityResponse
+CarTypeController --> R: 200 OK + availability
+
+R -> CarTypeController: GET /api/car-types/{id}/available-cars(pickupDateTime, returnDateTime)
+CarTypeController -> CarTypeService: getAvailableCars(id, pickup, return)
+CarTypeService -> CarTypeRepository: existsById(id)
+CarTypeRepository --> CarTypeService: boolean
+CarTypeService -> CarRepository: findByCarTypeId(id)
+CarRepository --> CarTypeService: List<Car>
+CarTypeService -> BookingCarRepository: findUnavailableCarIds(...)
+BookingCarRepository --> CarTypeService: List<UUID> unavailableCarIds
+CarTypeService --> CarTypeController: List<CarResponse>
+CarTypeController --> R: 200 OK + available cars (condition images included)
+
+== Optional AI Chat Recommendation ==
+R -> ChatController: POST /api/chat
+ChatController -> ChatService: generateResponse(message)
+ChatService -> CarTypeService: getAllInventoryWithData()
+CarTypeService -> CarTypeRepository: findAllWithFeatures()
+CarTypeRepository --> CarTypeService: List<CarType>
+CarTypeService -> CarTypeRepository: fetchCarsForTypes(carTypes)
+CarTypeRepository --> CarTypeService: List<CarType with cars>
+CarTypeService --> ChatService: inventory context text
+ChatService --> ChatController: AI reply
+ChatController --> R: 200 OK + ChatResponse
+
+== Create Booking ==
+R -> BookingController: POST /api/bookings(CreateBookingRequest, accountId from JWT)
+BookingController -> BookingService: createBooking(request, accountId)
+
+BookingService -> CarTypeRepository: existsById(request.carTypeId)
+CarTypeRepository --> BookingService: boolean
+
+alt selectedCarIds provided
+  BookingService -> CarRepository: findAllById(selectedCarIds)
+  CarRepository --> BookingService: List<Car>
+  BookingService -> CarRepository: findByCarTypeId(carTypeId)
+  CarRepository --> BookingService: List<Car>
+  BookingService -> BookingCarRepository: findUnavailableCarIds(...)
+  BookingCarRepository --> BookingService: List<UUID>
+else quantity-based auto assignment
+  BookingService -> CarRepository: findByCarTypeId(carTypeId)
+  CarRepository --> BookingService: List<Car>
+  BookingService -> BookingCarRepository: findUnavailableCarIds(...)
+  BookingCarRepository --> BookingService: List<UUID>
+end
+
+BookingService -> AccountRepository: findById(accountId)
+AccountRepository --> BookingService: Account
+BookingService -> BookingRepository: save(Booking status=CREATED)
+BookingRepository --> BookingService: saved Booking
+BookingService -> CarRepository: findAllById(selectedCarIds)
+CarRepository --> BookingService: List<Car>
+BookingService -> BookingCarRepository: saveAll(List<BookingCar>)
+BookingCarRepository --> BookingService: saved BookingCar list
+BookingService -> BookingService: calculateBookingPrice(cars, pickup, return)
+BookingService -> BookingRepository: save(bookingPrice, depositAmount, remainingAmount)
+BookingRepository --> BookingService: updated Booking
+
+alt payNow = true
+  BookingService -> PaymentTransactionService: createPayment(bookingId, BOOKING_PAYMENT, depositAmount)
+  PaymentTransactionService -> BookingRepository: findById(bookingId)
+  BookingRepository --> PaymentTransactionService: Booking
+  PaymentTransactionService -> PayosService: createPaymentLink(orderCode, amount, bookingId, BOOKING_PAYMENT)
+  PayosService -> PayOS: create payment link
+  PayOS --> PayosService: checkoutUrl
+  PayosService --> PaymentTransactionService: paymentUrl
+  PaymentTransactionService -> PaymentTransactionRepository: save(PaymentTransaction status=PENDING)
+  PaymentTransactionRepository --> PaymentTransactionService: saved transaction
+  PaymentTransactionService --> BookingService: PaymentTransactionResponse
+else payNow = false
+  note right of BookingService
+  Booking remains CREATED and no payment transaction is created here.
+  end note
+end
+
+BookingService --> BookingController: BookingResponse
+BookingController --> R: 201 Created
+
+note over BookingCarRepository
+"Lock vehicle calendar" is represented by saved BookingCar records
+plus future findUnavailableCarIds(...) checks.
+end note
+
+== Payment Result Confirmation ==
+PayOS -> PayosWebhookController: POST /api/payos/webhook
+PayosWebhookController -> PayosService: handleWebhook(webhook)
+PayosService -> PaymentTransactionRepository: findByPayOSPaymentCode(orderCode)
+PaymentTransactionRepository --> PayosService: PaymentTransaction
+
+alt transaction found and not already PAID
+  PayosService -> PayosService: set transaction.status = PAID
+  PayosService -> PayosService: if BOOKING_PAYMENT and booking status CREATED,\nset booking status CONFIRMED
+  PayosService -> PaymentTransactionRepository: save(transaction)
+  PaymentTransactionRepository --> PayosService: saved
+else not found or already paid
+  note right of PayosService: Returns OK for idempotency/retry safety.
+end
+PayosService --> PayosWebhookController: ResponseEntity("OK")
+PayosWebhookController --> PayOS: 200 OK
+
+R -> PaymentTransactionController: GET /api/payments/booking/{bookingId}/latest
+PaymentTransactionController -> PaymentTransactionService: getLatestByBookingId(bookingId)
+PaymentTransactionService -> PaymentTransactionRepository: findFirstByBooking_IdOrderByCreatedAtDesc(bookingId)
+PaymentTransactionRepository --> PaymentTransactionService: PaymentTransaction
+PaymentTransactionService --> PaymentTransactionController: PaymentTransactionResponse
+PaymentTransactionController --> R: 200 OK + latest payment status
+
+note over BookingController,PayosWebhookController
+No explicit backend endpoint sends booking confirmation notifications in this flow.
+end note
+
+@enduml

@@ -5,9 +5,10 @@ export interface PaymentTransactionResponse {
   bookingId: string;
   amount: number;
   payOSPaymentCode: number;
-  paymentUrl: string;
+  paymentUrl: string | null;
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED';
-  purpose: 'BOOKING_PAYMENT' | 'FINAL_PAYMENT';
+  purpose: 'BOOKING_PAYMENT' | 'FINAL_PAYMENT' | 'OVERDUE_PAYMENT';
+  paymentMethod: 'PAYOS' | 'CASH';
   createdAt: string;
   lastUpdatedAt: string;
 }

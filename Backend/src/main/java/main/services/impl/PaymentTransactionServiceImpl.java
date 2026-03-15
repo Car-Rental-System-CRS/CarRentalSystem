@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import main.dtos.response.PaymentTransactionResponse;
 import main.entities.Booking;
 import main.entities.PaymentTransaction;
+import main.enums.PaymentMethod;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
 import main.mappers.PaymentTransactionMapper;
@@ -31,40 +32,122 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     @Override
     @Transactional
     public PaymentTransactionResponse createPayment(UUID bookingId, PaymentPurpose paymentPurpose, BigDecimal amount) {
-
-        // Fetch booking
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
 
+        if (paymentPurpose == PaymentPurpose.OVERDUE_PAYMENT) {
+            throw new IllegalArgumentException("OVERDUE_PAYMENT is no longer created in new settlement flows. Use FINAL_PAYMENT.");
+        }
 
-        // Generate PayOS order code
-        long payOSOrderCode = System.currentTimeMillis() / 1000;
+        return createPayosPayment(booking, paymentPurpose, amount);
+    }
 
-        // Create PaymentTransaction (PENDING, no checkoutUrl yet)
+        @Override
+        @Transactional
+        public PaymentTransactionResponse createOrGetFinalPayment(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getActualReturnDate() == null) {
+            throw new IllegalStateException("Cannot create final payment before return is recorded");
+        }
+
+        BigDecimal remainingAmount = booking.getRemainingAmount() == null
+            ? BigDecimal.ZERO
+            : booking.getRemainingAmount();
+
+        if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("No remaining amount to settle");
+        }
+
+        return paymentTransactionRepository
+            .findFirstByBooking_IdAndPurposeAndStatusOrderByCreatedAtDesc(
+                bookingId,
+                PaymentPurpose.FINAL_PAYMENT,
+                PaymentStatus.PENDING
+            )
+            .map(paymentTransactionMapper::toPaymentTransactionResponse)
+            .orElseGet(() -> createPayosPayment(booking, PaymentPurpose.FINAL_PAYMENT, remainingAmount));
+        }
+
+        @Override
+        @Transactional
+        public PaymentTransactionResponse settleFinalPaymentByCash(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getActualReturnDate() == null) {
+            throw new IllegalStateException("Cannot settle final payment before return is recorded");
+        }
+
+        BigDecimal remainingAmount = booking.getRemainingAmount() == null
+            ? BigDecimal.ZERO
+            : booking.getRemainingAmount();
+
+        if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("No remaining amount to settle");
+        }
+
+        paymentTransactionRepository
+            .findFirstByBooking_IdAndPurposeAndStatusOrderByCreatedAtDesc(
+                bookingId,
+                PaymentPurpose.FINAL_PAYMENT,
+                PaymentStatus.PENDING
+            )
+            .ifPresent(tx -> {
+                tx.setStatus(PaymentStatus.CANCELLED);
+                paymentTransactionRepository.save(tx);
+            });
+
+        PaymentTransaction cashTransaction = PaymentTransaction.builder()
+            .booking(booking)
+            .purpose(PaymentPurpose.FINAL_PAYMENT)
+            .paymentMethod(PaymentMethod.CASH)
+            .amount(remainingAmount)
+            .payOSPaymentCode(generatePayOSOrderCode())
+            .status(PaymentStatus.PAID)
+            .paymentUrl(null)
+            .build();
+        paymentTransactionRepository.save(cashTransaction);
+
+        booking.setRemainingAmount(BigDecimal.ZERO);
+        booking.setStatus(main.enums.BookingStatus.COMPLETED);
+        bookingRepository.save(booking);
+
+        return paymentTransactionMapper.toPaymentTransactionResponse(cashTransaction);
+        }
+
+        private PaymentTransactionResponse createPayosPayment(Booking booking, PaymentPurpose paymentPurpose, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be greater than zero");
+        }
+
+        long payOSOrderCode = generatePayOSOrderCode();
+
         PaymentTransaction transaction = PaymentTransaction.builder()
-                .booking(booking)
-                .purpose(paymentPurpose)
-                .amount(amount) //amount is decided per case
-                .payOSPaymentCode(payOSOrderCode)
-                .status(PaymentStatus.PENDING)
-                .build();
+            .booking(booking)
+            .purpose(paymentPurpose)
+            .paymentMethod(PaymentMethod.PAYOS)
+            .amount(amount)
+            .payOSPaymentCode(payOSOrderCode)
+            .status(PaymentStatus.PENDING)
+            .build();
 
-        // Call PayOS → get checkout URL
-        String paymentLink =
-                payosService.createPaymentLink(
-                        payOSOrderCode,
-                        amount,  // Use actual deposit amount
-                        bookingId
-                );
-        
-        // Store the checkout URL in the transaction
+        String paymentLink = payosService.createPaymentLink(
+            payOSOrderCode,
+            amount,
+            booking.getId(),
+            paymentPurpose
+        );
+
         transaction.setPaymentUrl(paymentLink);
         paymentTransactionRepository.save(transaction);
+        return paymentTransactionMapper.toPaymentTransactionResponse(transaction);
+        }
 
-        PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
-        response.setPaymentUrl(paymentLink);
-        return response;
-    }
+        private long generatePayOSOrderCode() {
+        return (System.currentTimeMillis() * 1000L) + (System.nanoTime() % 1000L);
+        }
 
 
 
@@ -72,9 +155,9 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     public PaymentTransactionResponse getById(UUID paymentTransactionId) {
         PaymentTransaction transaction = paymentTransactionRepository.findById(paymentTransactionId)
                 .orElseThrow(() -> new RuntimeException("Payment transaction not found"));
-        
+
         PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
-        
+
         // Use stored payment URL if status is PENDING
         if (transaction.getStatus() == PaymentStatus.PENDING && transaction.getPaymentUrl() != null) {
             response.setPaymentUrl(transaction.getPaymentUrl());
@@ -86,11 +169,11 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     @Override
     public PaymentTransactionResponse getLatestByBookingId(UUID bookingId) {
         PaymentTransaction transaction = paymentTransactionRepository
-                .findFirstByBooking_IdOrderByIdDesc(bookingId)
+                .findFirstByBooking_IdOrderByCreatedAtDesc(bookingId)
                 .orElseThrow(() -> new RuntimeException("No payment transaction found for booking"));
-        
+
         PaymentTransactionResponse response = paymentTransactionMapper.toPaymentTransactionResponse(transaction);
-        
+
         // Use stored payment URL if status is PENDING
         if (transaction.getStatus() == PaymentStatus.PENDING && transaction.getPaymentUrl() != null) {
             response.setPaymentUrl(transaction.getPaymentUrl());

@@ -9,18 +9,21 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Users, Fuel, Calendar, Loader2 } from 'lucide-react';
+import { Search, Users, Fuel, Loader2 } from 'lucide-react';
 import { BookingCart } from '@/components/BookingCart';
 import { toast } from 'sonner';
 import { useSessionStatus } from '@/components/SessionProvider';
 import { getServerUrl } from '@/lib/utils';
 
 export default function VehicleListings() {
+  const PAGE_SIZE = 8;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedSeats, setSelectedSeats] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
   const [priceRange, setPriceRange] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // API data
   const [vehicles, setVehicles] = useState<VehicleModel[]>([]);
@@ -126,6 +129,24 @@ export default function VehicleListings() {
     return filtered;
   }, [vehicles, searchQuery, selectedBrand, selectedSeats, sortBy, priceRange]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedVehicles.length / PAGE_SIZE));
+
+  const paginatedVehicles = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    return filteredAndSortedVehicles.slice(startIndex, endIndex);
+  }, [filteredAndSortedVehicles, currentPage, PAGE_SIZE]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedBrand, selectedSeats, sortBy, priceRange]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -207,7 +228,8 @@ export default function VehicleListings() {
       {/* Sort and Results Count */}
       <div className="flex justify-between items-center mb-6">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredAndSortedVehicles.length} of {vehicles.length} vehicles
+          Showing {filteredAndSortedVehicles.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}-
+          {Math.min(currentPage * PAGE_SIZE, filteredAndSortedVehicles.length)} of {filteredAndSortedVehicles.length} vehicles
         </p>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[180px]">
@@ -229,68 +251,112 @@ export default function VehicleListings() {
           <p className="text-muted-foreground">Try adjusting your filters</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredAndSortedVehicles.map((vehicle) => (
-            <Card key={vehicle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <CardHeader className="p-0">
-                {vehicle.image ? (
-                  <div className="aspect-[4/3] relative">
-                    <img
-                      src={getServerUrl() + vehicle.image}
-                      alt={vehicle.carName}
-                      className="w-full h-full object-cover"
-                    />
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {paginatedVehicles.map((vehicle) => (
+              <Card
+                key={vehicle.id}
+                className="h-full overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+              >
+                <CardHeader className="p-0">
+                  {vehicle.image ? (
+                    <div className="aspect-[4/3] relative">
+                      <img
+                        src={getServerUrl() + vehicle.image}
+                        alt={vehicle.carName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-[4/3] bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center">
+                      <span className="text-6xl">🚗</span>
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent className="p-4 flex-1 flex flex-col">
+                  <div className="mb-2">
+                    <Badge variant="secondary" className="mb-2">
+                      {vehicle.brandName}
+                    </Badge>
+                    <h3 className="font-bold text-lg mb-1 line-clamp-2 min-h-[3.5rem]">
+                      {vehicle.carName}
+                    </h3>
                   </div>
-                ) : (
-                  <div className="aspect-[4/3] bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center">
-                    <span className="text-6xl">🚗</span>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="mb-2">
-                  <Badge variant="secondary" className="mb-2">
-                    {vehicle.brandName}
-                  </Badge>
-                  <h3 className="font-bold text-lg mb-1">{vehicle.carName}</h3>
-                </div>
 
-                <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>{vehicle.numberOfSeats} Seats</span>
+                  <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>{vehicle.numberOfSeats} Seats</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Fuel className="h-4 w-4" />
+                      <span>{vehicle.consumption}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Fuel className="h-4 w-4" />
-                    <span>{vehicle.consumption}</span>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {vehicle.features
-                    .slice(0, 3)
-                    .map((feature) => (
-                      <Badge key={feature.id} variant="outline" className="text-xs">
-                        {feature.name}
-                      </Badge>
-                    ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div>
-                    <p className="text-2xl font-bold">${vehicle.pricePerDay}</p>
-                    <p className="text-xs text-muted-foreground">per day</p>
+                  <div className="mb-4 min-h-[3.5rem]">
+                    {vehicle.features.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {vehicle.features
+                          .slice(0, 3)
+                          .map((feature) => (
+                            <Badge key={feature.id} variant="outline" className="text-xs">
+                              {feature.name}
+                            </Badge>
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No features listed</p>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="p-4 pt-0">
-                <Link href={`/vehicles/${vehicle.id}`} className="w-full">
-                  <Button className="w-full">View Details</Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+
+                  <div className="mt-auto flex items-center justify-between pt-4 border-t">
+                    <div>
+                      <p className="text-2xl font-bold">${vehicle.pricePerDay}</p>
+                      <p className="text-xs text-muted-foreground">per day</p>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="p-4 pt-0 mt-auto">
+                  <Link href={`/vehicles/${vehicle.id}`} className="w-full">
+                    <Button className="w-full">View Details</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            >
+              Previous
+            </Button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((page) => (
+              <Button
+                key={page}
+                variant={page === currentPage ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </Button>
+            ))}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

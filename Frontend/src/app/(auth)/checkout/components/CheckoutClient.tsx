@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { createBooking } from '@/services/bookingService';
-import { handleError } from '@/lib/errorHandler';
+import { getErrorMessage, handleError } from '@/lib/errorHandler';
 
 // Deposit percentage (should match backend)
 const DEPOSIT_PERCENTAGE = 0.30; // 30%
@@ -72,7 +72,8 @@ export default function CheckoutClient() {
       // Create booking via API
       const bookingResponse = await createBooking({
         carTypeId: cartItem.carTypeId,
-        quantity: cartItem.quantity,
+        quantity: cartItem.selectedCarIds?.length || cartItem.quantity,
+        selectedCarIds: cartItem.selectedCarIds,
         expectedReceiveDate: cartItem.pickupDateTime.toISOString(),
         expectedReturnDate: cartItem.returnDateTime.toISOString(),
         payNow,
@@ -105,6 +106,14 @@ export default function CheckoutClient() {
         router.push(`/bookings/${bookingResponse.id}`);
       }
     } catch (error) {
+      const message = getErrorMessage(error);
+      if (message.toLowerCase().includes('no longer available')) {
+        toast.error('Selected cars are no longer available', {
+          description: 'Please re-select available cars for your booking period.',
+        });
+        router.push(`/vehicles/${cartItem.carTypeId}`);
+        return;
+      }
       handleError(error, 'Failed to create booking');
     } finally {
       setIsProcessing(false);

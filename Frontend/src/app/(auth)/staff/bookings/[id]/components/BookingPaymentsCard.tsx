@@ -30,12 +30,15 @@ export default function BookingPaymentsCard({ booking }: Props) {
         {booking.payments.map((payment) => (
           <div
             key={payment.id}
-            className="bg-gray-50 rounded-lg p-4 flex justify-between items-center"
+            className="bg-gray-50 rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
           >
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <span className="text-sm font-medium text-gray-900">
                 {payment.purpose.replace(/_/g, ' ')}
               </span>
+              <div className="text-xs text-gray-500">
+                Method: {payment.paymentMethod}
+              </div>
               <div className="text-xs text-gray-500">
                 {new Date(payment.createdAt).toLocaleString('vi-VN')}
               </div>
@@ -52,8 +55,8 @@ export default function BookingPaymentsCard({ booking }: Props) {
                 </a>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold">
+            <div className="flex items-center gap-3 flex-wrap sm:justify-end sm:self-center">
+              <span className="text-sm font-semibold shrink-0">
                 {formatCurrency(payment.amount)}
               </span>
               <PaymentStatusBadge

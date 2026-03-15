@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import main.entities.PaymentTransaction;
 import main.enums.PaymentPurpose;
+import main.enums.PaymentStatus;
 
 public interface PaymentTransactionRepository
         extends JpaRepository<PaymentTransaction, UUID> {
@@ -22,8 +23,14 @@ public interface PaymentTransactionRepository
 
     List<PaymentTransaction> findByBooking_Id(UUID bookingId);
 
-    // Find the latest payment transaction for a booking
-    Optional<PaymentTransaction> findFirstByBooking_IdOrderByIdDesc(UUID bookingId);
+       // Find the latest payment transaction for a booking by creation timestamp
+       Optional<PaymentTransaction> findFirstByBooking_IdOrderByCreatedAtDesc(UUID bookingId);
+
+    Optional<PaymentTransaction> findFirstByBooking_IdAndPurposeAndStatusOrderByCreatedAtDesc(
+           UUID bookingId,
+           PaymentPurpose purpose,
+           PaymentStatus status
+    );
 
     Optional<PaymentTransaction> findByPayOSPaymentCode(Long payOSPaymentCode);
 

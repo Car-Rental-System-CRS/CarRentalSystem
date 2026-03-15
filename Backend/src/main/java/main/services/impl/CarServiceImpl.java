@@ -3,20 +3,24 @@ package main.services.impl;
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateCarRequest;
 import main.dtos.response.CarResponse;
+import main.dtos.response.MediaFileResponse;
 import main.entities.Car;
 import main.entities.CarType;
+import main.entities.MediaFile;
 import main.mappers.CarMapper;
+import main.mappers.MediaFileMapper;
 import main.repositories.CarRepository;
 import main.repositories.CarTypeRepository;
 import main.services.CarService;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
+import main.services.MediaFileService;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class CarServiceImpl implements CarService {
 
     private final CarRepository carRepository;
     private final CarTypeRepository carTypeRepository;
+    private final MediaFileService mediaFileService;
 
     // ===== CREATE =====
     @Override
@@ -47,7 +52,7 @@ public class CarServiceImpl implements CarService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Car not found: " + id));
 
-        return CarMapper.toResponse(entity);
+        return CarMapper.toResponseWithDamageImages(entity);
     }
 
     // ===== GET ALL (Specification + Pageable) =====
@@ -75,10 +80,40 @@ public class CarServiceImpl implements CarService {
 
         entity.setLicensePlate(request.getLicensePlate());
         entity.setImportDate(request.getImportDate());
+        entity.setCarType(type);
 
         Car saved = carRepository.save(entity);
 
         return CarMapper.toResponse(saved);
+    }
+
+    @Override
+    public List<MediaFileResponse> addDamageImages(UUID carId, MultipartFile[] images, String[] imageDescriptions) {
+        if (images == null || images.length == 0) {
+            throw new IllegalArgumentException("No images provided");
+        }
+
+        if (images.length > 10) {
+            throw new IllegalArgumentException("Maximum 10 damage images are allowed per request");
+        }
+
+        List<MediaFile> existingMedia = mediaFileService.getCarDamageMediaFiles(carId);
+        int startOrder = existingMedia.isEmpty() ? 0 : existingMedia.size();
+
+        for (int i = 0; i < images.length; i++) {
+            String description = (imageDescriptions != null && i < imageDescriptions.length)
+                    ? imageDescriptions[i] : null;
+            mediaFileService.uploadCarDamageMediaFile(carId, images[i], description, startOrder + i);
+        }
+
+        return mediaFileService.getCarDamageMediaFiles(carId).stream()
+                .map(MediaFileMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public void removeDamageImage(UUID carId, UUID imageId) {
+        mediaFileService.deleteCarDamageMediaFile(carId, imageId);
     }
 
     // ===== DELETE =====
@@ -87,6 +122,8 @@ public class CarServiceImpl implements CarService {
         if (!carRepository.existsById(id)) {
             throw new IllegalArgumentException("Car not found: " + id);
         }
+
+        mediaFileService.deleteMediaFilesByCar(id);
 
         carRepository.deleteById(id);
     }

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import main.dtos.APIResponse;
 import main.dtos.request.CreateCarRequest;
 import main.dtos.response.CarResponse;
+import main.dtos.response.MediaFileResponse;
 import main.dtos.response.PageResponse;
 import main.entities.Car;
 import main.services.CarService;
@@ -12,9 +13,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -97,6 +100,51 @@ public class CarController {
                         .success(true)
                         .message("Car updated")
                         .data(data)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @PostMapping(value = "/{id}/damage-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_EDIT')")
+    public ResponseEntity<APIResponse<List<MediaFileResponse>>> uploadDamageImages(
+            @PathVariable UUID id,
+            @RequestParam("images") MultipartFile[] images,
+            @RequestParam(value = "imageDescriptions", required = false) List<String> imageDescriptionsList) {
+
+        if (images == null || images.length == 0) {
+            throw new IllegalArgumentException("No images provided");
+        }
+
+        if (images.length > 10) {
+            throw new IllegalArgumentException("Maximum 10 damage images are allowed per request");
+        }
+
+        String[] imageDescriptions = imageDescriptionsList != null
+                ? imageDescriptionsList.toArray(String[]::new) : new String[0];
+
+        List<MediaFileResponse> data = carService.addDamageImages(id, images, imageDescriptions);
+        return ResponseEntity.ok(
+                APIResponse.<List<MediaFileResponse>>builder()
+                        .success(true)
+                        .message("Damage images uploaded")
+                        .data(data)
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @DeleteMapping("/{id}/damage-images/{imageId}")
+    @PreAuthorize("hasRole('STAFF') and hasAuthority('CAR_EDIT')")
+    public ResponseEntity<APIResponse<Void>> deleteDamageImage(
+            @PathVariable UUID id,
+            @PathVariable UUID imageId) {
+        carService.removeDamageImage(id, imageId);
+        return ResponseEntity.ok(
+                APIResponse.<Void>builder()
+                        .success(true)
+                        .message("Damage image deleted")
+                        .data(null)
                         .timestamp(Instant.now())
                         .build()
         );
