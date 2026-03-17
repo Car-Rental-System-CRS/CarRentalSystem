@@ -8,27 +8,36 @@ interface Props {
   booking: AdminBookingResponse;
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
 function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleString('vi-VN', {
+
+  // Treat backend datetime as UTC if it has no timezone info
+  const normalizedDateStr =
+    /Z|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`;
+
+  const formatter = new Intl.DateTimeFormat('en-GB', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Bangkok',
   });
+
+  const parts = formatter.formatToParts(new Date(normalizedDateStr));
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+
+  return `${getPart('hour')}:${getPart('minute')} ${getPart('day')}/${getPart('month')}/${getPart('year')}`;
 }
 
 export default function BookingInfoCard({ booking }: Props) {
+  const latestNotifications = booking.notifications?.slice(0, 3) ?? [];
+
+  const formatEventLabel = (value: string) =>
+    value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+
   return (
     <div className="bg-white border rounded-xl p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -71,7 +80,7 @@ export default function BookingInfoCard({ booking }: Props) {
               Expected Pickup
             </div>
             <span className="font-medium text-sm">
-              {formatDate(booking.expectedReceiveDate)}
+              {formatDateTime(booking.expectedReceiveDate)}
             </span>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
@@ -80,7 +89,7 @@ export default function BookingInfoCard({ booking }: Props) {
               Expected Return
             </div>
             <span className="font-medium text-sm">
-              {formatDate(booking.expectedReturnDate)}
+              {formatDateTime(booking.expectedReturnDate)}
             </span>
           </div>
         </div>
@@ -132,6 +141,45 @@ export default function BookingInfoCard({ booking }: Props) {
               <p className="text-sm text-gray-600 whitespace-pre-wrap">{booking.returnNotes}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {latestNotifications.length > 0 && (
+        <div className="pt-2 border-t border-gray-100">
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">Notification Status</h4>
+          <div className="space-y-2">
+            {latestNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-gray-900">
+                    {formatEventLabel(notification.eventType)}
+                  </span>
+                  <span
+                    className={`text-xs font-semibold uppercase ${
+                      notification.deliveryStatus === 'SENT'
+                        ? 'text-green-600'
+                        : notification.deliveryStatus === 'FAILED'
+                          ? 'text-red-600'
+                          : notification.deliveryStatus === 'SKIPPED'
+                            ? 'text-amber-600'
+                            : 'text-gray-500'
+                    }`}
+                  >
+                    {notification.deliveryStatus}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Triggered: {formatDateTime(notification.triggeredAt)}
+                </p>
+                {notification.failureReason && (
+                  <p className="mt-1 text-xs text-red-600">{notification.failureReason}</p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

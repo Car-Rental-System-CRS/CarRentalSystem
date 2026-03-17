@@ -3,19 +3,24 @@
 import { SessionProvider as NextAuthSessionProvider, useSession } from 'next-auth/react';
 import { ReactNode, useEffect, createContext, useContext } from 'react';
 import { setAuthToken } from '@/lib/axios';
+import { AccountProfile } from '@/types/user';
 
 type SessionStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface SessionContextType {
   status: SessionStatus;
+  syncProfile: (profile: AccountProfile) => Promise<void>;
 }
 
-const SessionContext = createContext<SessionContextType>({ status: 'loading' });
+const SessionContext = createContext<SessionContextType>({
+  status: 'loading',
+  syncProfile: async () => {},
+});
 
 export const useSessionStatus = () => useContext(SessionContext);
 
 function SessionTokenSync({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
 
   useEffect(() => {
     // Only sync once the session status is determined (not loading)
@@ -31,8 +36,23 @@ function SessionTokenSync({ children }: { children: ReactNode }) {
     }
   }, [session, status]);
 
+  const syncProfile = async (profile: AccountProfile) => {
+    await update({
+      user: {
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone ?? '',
+        baseRole: profile.baseRole,
+        customRoleId: profile.customRole?.id,
+        customRoleName: profile.customRole?.name,
+        scopes: profile.scopes,
+      },
+    });
+  };
+
   return (
-    <SessionContext.Provider value={{ status }}>
+    <SessionContext.Provider value={{ status, syncProfile }}>
       {children}
     </SessionContext.Provider>
   );

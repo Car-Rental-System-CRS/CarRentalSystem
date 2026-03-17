@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, ArrowLeft, CreditCard, Clock, Info } from 'lucide-react';
+import { Calendar, User, ArrowLeft, CreditCard, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -226,7 +226,7 @@ export default function CheckoutClient() {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <Button
                   size="lg"
                   className="h-auto py-6 flex flex-col gap-2"
@@ -238,18 +238,6 @@ export default function CheckoutClient() {
                   <span className="text-sm opacity-80">
                     ${(cartItem.totalPrice * DEPOSIT_PERCENTAGE).toFixed(2)} (30%)
                   </span>
-                </Button>
-
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-auto py-6 flex flex-col gap-2"
-                  onClick={() => handleSubmit(false)}
-                  disabled={isProcessing}
-                >
-                  <Clock className="h-6 w-6" />
-                  <span className="font-semibold">Pay Later</span>
-                  <span className="text-sm opacity-80">Pay from My Bookings</span>
                 </Button>
               </div>
 

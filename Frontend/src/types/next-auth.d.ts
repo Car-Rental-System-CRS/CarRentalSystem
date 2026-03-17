@@ -8,7 +8,7 @@ declare module 'next-auth' {
       id: string;
       name: string;
       email: string;
-      phone: string;
+      phone?: string | null;
       baseRole: 'USER' | 'STAFF' | 'ADMIN';
       customRoleId?: string;
       customRoleName?: string;
@@ -20,7 +20,7 @@ declare module 'next-auth' {
     id: string;
     name: string;
     email: string;
-    phone?: string;
+    phone?: string | null;
     accessToken?: string;
     baseRole?: 'USER' | 'STAFF' | 'ADMIN';
     customRoleId?: string;
@@ -33,7 +33,9 @@ declare module 'next-auth/jwt' {
   interface JWT {
     accessToken?: string;
     id?: string;
-    phone?: string;
+    name?: string;
+    email?: string;
+    phone?: string | null;
     baseRole?: 'USER' | 'STAFF' | 'ADMIN';
     customRoleId?: string;
     customRoleName?: string;

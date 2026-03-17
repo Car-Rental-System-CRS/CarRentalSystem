@@ -17,7 +17,12 @@ function formatCurrency(amount: number): string {
 }
 
 export default function BookingPaymentsCard({ booking }: Props) {
-  if (!booking.payments || booking.payments.length === 0) return null;
+  const completionNotification = booking.notifications?.find(
+    (notification) => notification.eventType === 'BOOKING_COMPLETED'
+  );
+  const payments = booking.payments ?? [];
+
+  if (payments.length === 0 && !completionNotification) return null;
 
   return (
     <div className="bg-white border rounded-xl p-6 space-y-4">
@@ -26,8 +31,15 @@ export default function BookingPaymentsCard({ booking }: Props) {
         Payment Transactions ({booking.payments.length})
       </h3>
 
+      {completionNotification && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Completion email status: <span className="font-semibold">{completionNotification.deliveryStatus}</span>
+          {completionNotification.failureReason ? ` (${completionNotification.failureReason})` : ''}
+        </div>
+      )}
+
       <div className="space-y-3">
-        {booking.payments.map((payment) => (
+        {payments.map((payment) => (
           <div
             key={payment.id}
             className="bg-gray-50 rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"

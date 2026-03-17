@@ -41,6 +41,21 @@ export function RentalPeriodPicker({
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange)
   const [pickupTime, setPickupTime] = useState<string>("09:00")
   const [returnTime, setReturnTime] = useState<string>("20:00")
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)")
+    const updateIsDesktop = (event?: MediaQueryListEvent) => {
+      setIsDesktop(event ? event.matches : mediaQuery.matches)
+    }
+
+    updateIsDesktop()
+    mediaQuery.addEventListener("change", updateIsDesktop)
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsDesktop)
+    }
+  }, [])
 
   useEffect(() => {
     setTempDateRange(dateRange)
@@ -158,26 +173,26 @@ export function RentalPeriodPicker({
             <span className="truncate">{formatButtonText()}</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-[700px] p-0">
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-[700px] overflow-y-auto p-0">
           <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle className="text-center text-xl">Rental Period</DialogTitle>
           </DialogHeader>
           
           <div className="px-6 pb-6 space-y-4 mt-4">
               {/* Calendar */}
-              <div className="flex justify-center">
+              <div className="flex justify-center overflow-x-auto pb-1">
                 <Calendar
                   mode="range"
                   selected={tempDateRange}
                   onSelect={handleDateSelect}
-                  numberOfMonths={2}
+                  numberOfMonths={isDesktop ? 2 : 1}
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  className="rounded-md border"
+                  className="rounded-md border bg-background"
                 />
               </div>
 
               {/* Time Selectors */}
-              <div className="grid grid-cols-[1fr,auto,1fr] gap-4 items-center">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr,auto,1fr] md:items-center">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Pick up time</Label>
                   <Select value={pickupTime} onValueChange={(val) => handleTimeChange('pickup', val)}>
@@ -194,7 +209,7 @@ export function RentalPeriodPicker({
                   </Select>
                 </div>
 
-                <ArrowRightLeft className="h-4 w-4 text-muted-foreground mt-7" />
+                <ArrowRightLeft className="mx-auto h-4 w-4 text-muted-foreground md:mt-7" />
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Return time</Label>

@@ -125,7 +125,7 @@ export default function GpsTracker({ cars }: Props) {
       </h3>
 
       {/* Map */}
-      <div className="rounded-lg overflow-hidden border" style={{ height: 400 }}>
+      <div className="gps-map-shell rounded-lg overflow-hidden border" style={{ height: 400 }}>
         <MapView tracks={tracks} />
       </div>
 

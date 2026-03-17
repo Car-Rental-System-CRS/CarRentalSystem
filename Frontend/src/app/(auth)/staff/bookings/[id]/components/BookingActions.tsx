@@ -4,12 +4,28 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminBookingResponse, staffBookingService } from '@/services/staffBookingService';
 import { Button } from '@/components/ui/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { handleError, handleSuccess } from '@/lib/errorHandler';
 import { CheckCircle, RotateCcw, Loader2, Wallet, Link as LinkIcon, ClipboardCheck } from 'lucide-react';
 
 interface Props {
   booking: AdminBookingResponse;
   onUpdated: (booking: AdminBookingResponse) => void;
+}
+
+interface ConfirmationState {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  variant?: 'default' | 'destructive';
+  action: () => Promise<void> | void;
 }
 
 export default function BookingActions({ booking, onUpdated }: Props) {
@@ -19,12 +35,14 @@ export default function BookingActions({ booking, onUpdated }: Props) {
   >(null);
   const [pickupNotes, setPickupNotes] = useState(booking.pickupNotes ?? '');
   const [returnNotes, setReturnNotes] = useState(booking.returnNotes ?? '');
+  const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
 
   const pendingSettlementPayment = booking.payments?.find(
     (payment) =>
       (payment.purpose === 'FINAL_PAYMENT' || payment.purpose === 'OVERDUE_PAYMENT')
       && payment.status === 'PENDING'
   );
+  const latestNotification = booking.notifications?.[0] ?? null;
 
   const needsInspection =
     booking.status === 'IN_PROGRESS' &&
@@ -43,7 +61,6 @@ export default function BookingActions({ booking, onUpdated }: Props) {
   };
 
   const handleConfirmPickup = async () => {
-    if (!confirm('Are you sure the car has been handed to the renter?')) return;
     setLoadingAction('pickup');
     try {
       const res = await staffBookingService.confirmPickup(booking.id, {
@@ -59,7 +76,6 @@ export default function BookingActions({ booking, onUpdated }: Props) {
   };
 
   const handleConfirmReturn = async () => {
-    if (!confirm('Are you sure the car has been returned by the renter?')) return;
     setLoadingAction('return');
     try {
       const res = await staffBookingService.confirmReturn(booking.id, {
@@ -97,7 +113,6 @@ export default function BookingActions({ booking, onUpdated }: Props) {
   };
 
   const handleSettleCash = async () => {
-    if (!confirm('Confirm cash payment has been received in full?')) return;
     setLoadingAction('cash');
     try {
       await staffBookingService.settleCash(booking.id);
@@ -107,6 +122,25 @@ export default function BookingActions({ booking, onUpdated }: Props) {
       handleError(error, 'Failed to record cash payment');
     } finally {
       setLoadingAction(null);
+    }
+  };
+
+  const openConfirmation = (next: ConfirmationState) => {
+    if (loadingAction !== null) return;
+    setConfirmation(next);
+  };
+
+  const closeConfirmation = () => {
+    if (loadingAction !== null) return;
+    setConfirmation(null);
+  };
+
+  const handleConfirmedAction = async () => {
+    if (!confirmation) return;
+    try {
+      await confirmation.action();
+    } finally {
+      setConfirmation(null);
     }
   };
 
@@ -137,6 +171,15 @@ export default function BookingActions({ booking, onUpdated }: Props) {
     <div className="bg-white border rounded-xl p-6 space-y-4">
       <h3 className="text-lg font-semibold text-gray-900">Actions</h3>
 
+      {latestNotification && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          Latest notification: <span className="font-medium">{latestNotification.eventType.replace(/_/g, ' ')}</span>
+          {' · '}
+          <span className="font-medium">{latestNotification.deliveryStatus}</span>
+          {latestNotification.failureReason ? ` · ${latestNotification.failureReason}` : ''}
+        </div>
+      )}
+
       {booking.status === 'CREATED' && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-800">
@@ -160,7 +203,15 @@ export default function BookingActions({ booking, onUpdated }: Props) {
             />
           </div>
           <Button
-            onClick={handleConfirmPickup}
+            onClick={() =>
+              openConfirmation({
+                title: 'Confirm pickup',
+                description:
+                  'Are you sure that the vehicle has been handed over to the renter?',
+                confirmLabel: 'Confirm Pickup',
+                action: handleConfirmPickup,
+              })
+            }
             disabled={loadingAction !== null}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             size="lg"
@@ -190,7 +241,15 @@ export default function BookingActions({ booking, onUpdated }: Props) {
             />
           </div>
           <Button
-            onClick={handleConfirmReturn}
+            onClick={() =>
+              openConfirmation({
+                title: 'Confirm return',
+                description:
+                  'Confirm that the renter has returned the vehicle. This will record the return and require post-trip inspection before settlement.',
+                confirmLabel: 'Confirm Return',
+                action: handleConfirmReturn,
+              })
+            }
             disabled={loadingAction !== null}
             className="w-full bg-orange-600 hover:bg-orange-700 text-white"
             size="lg"
@@ -211,7 +270,15 @@ export default function BookingActions({ booking, onUpdated }: Props) {
             Post-trip inspection is required before payment settlement.
           </p>
           <Button
-            onClick={() => router.push(`/staff/bookings/${booking.id}/post-trip-damage`)}
+            onClick={() =>
+              openConfirmation({
+                title: 'Open post-trip damage capture',
+                description:
+                  'Continue to the post-trip inspection screen for this booking. Use this when the vehicle has been returned and inspection is ready to be recorded.',
+                confirmLabel: 'Open Inspection',
+                action: () => router.push(`/staff/bookings/${booking.id}/post-trip-damage`),
+              })
+            }
             disabled={loadingAction !== null}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white whitespace-normal h-auto py-2 leading-snug"
             size="lg"
@@ -228,7 +295,15 @@ export default function BookingActions({ booking, onUpdated }: Props) {
             Remaining amount due: <span className="font-semibold">${booking.remainingAmount.toFixed(2)}</span>
           </p>
           <Button
-            onClick={handleGenerateFinalPayment}
+            onClick={() =>
+              openConfirmation({
+                title: 'Generate final payment link',
+                description:
+                  'Create a PayOS settlement link for the remaining balance. A new payment link will be opened in a new tab if creation succeeds.',
+                confirmLabel: 'Generate Link',
+                action: handleGenerateFinalPayment,
+              })
+            }
             disabled={loadingAction !== null}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white whitespace-normal h-auto py-2 leading-snug"
             size="lg"
@@ -238,22 +313,45 @@ export default function BookingActions({ booking, onUpdated }: Props) {
             ) : (
               <LinkIcon className="w-4 h-4 mr-2" />
             )}
-            Generate PayOS Final Payment Link
+            Generate Final Payment Link
           </Button>
 
           {pendingSettlementPayment?.paymentUrl && (
-            <a
-              href={pendingSettlementPayment.paymentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-sm text-blue-700 hover:text-blue-800"
+            <button
+              type="button"
+              onClick={() =>
+                openConfirmation({
+                  title: 'Open pending payment link',
+                  description:
+                    'Open the existing pending PayOS payment link in a new tab for the renter to complete settlement.',
+                  confirmLabel: 'Open Link',
+                  action: () => {
+                    if (!pendingSettlementPayment.paymentUrl) return;
+                    window.open(
+                      pendingSettlementPayment.paymentUrl,
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
+                  },
+                })
+              }
+              disabled={loadingAction !== null}
+              className="block text-sm text-blue-700 hover:text-blue-800 disabled:opacity-50"
             >
               Open existing pending payment link
-            </a>
+            </button>
           )}
 
           <Button
-            onClick={handleSettleCash}
+            onClick={() =>
+              openConfirmation({
+                title: 'Record cash settlement',
+                description:
+                  'Confirm that the remaining amount has been collected in full by cash. This will mark the booking as COMPLETED.',
+                confirmLabel: 'Mark Paid',
+                action: handleSettleCash,
+              })
+            }
             disabled={loadingAction !== null}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
             size="lg"
@@ -267,6 +365,34 @@ export default function BookingActions({ booking, onUpdated }: Props) {
           </Button>
         </div>
       )}
+
+      <Dialog open={!!confirmation} onOpenChange={(open) => !open && closeConfirmation()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{confirmation?.title}</DialogTitle>
+            <DialogDescription>{confirmation?.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeConfirmation} disabled={loadingAction !== null}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmedAction}
+              disabled={loadingAction !== null}
+              variant={confirmation?.variant ?? 'default'}
+            >
+              {loadingAction !== null ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                confirmation?.confirmLabel
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

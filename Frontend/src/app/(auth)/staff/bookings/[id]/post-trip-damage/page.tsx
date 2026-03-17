@@ -169,7 +169,6 @@ export default function PostTripDamageCapturePage() {
     updateCarDraft(carId, (draft) => ({
       ...draft,
       selectedImages: [...draft.selectedImages, ...processed].slice(0, 10),
-      hasNewDamage: true,
     }));
   };
 
@@ -195,6 +194,31 @@ export default function PostTripDamageCapturePage() {
     }));
   };
 
+  const uploadDamageImagesForDraft = async (
+    bookingId: string,
+    carId: string,
+    draft: CarInspectionDraft
+  ): Promise<string[]> => {
+    if (draft.selectedImages.length === 0) {
+      return draft.linkedDamageImageIds;
+    }
+
+    const uploadRes = await staffBookingService.uploadPostTripDamageImages(
+      bookingId,
+      carId,
+      draft.selectedImages
+    );
+    const uploadedImageIds = (uploadRes.data.data ?? []).map((image) => image.id);
+
+    draft.selectedImages.forEach((image) => {
+      if (image.preview) {
+        URL.revokeObjectURL(image.preview);
+      }
+    });
+
+    return Array.from(new Set([...draft.linkedDamageImageIds, ...uploadedImageIds]));
+  };
+
   const uploadCarDamageImages = async (carId: string) => {
     const draft = carDrafts[carId];
     if (!booking || !draft || draft.selectedImages.length === 0 || !canEditInspection) return;
@@ -202,29 +226,15 @@ export default function PostTripDamageCapturePage() {
     updateCarDraft(carId, (current) => ({ ...current, isUploading: true }));
 
     try {
-      const uploadRes = await staffBookingService.uploadPostTripDamageImages(
-        booking.id,
-        carId,
-        draft.selectedImages
-      );
-      const uploadedImageIds = (uploadRes.data.data ?? []).map((image) => image.id);
+      const mergedImageIds = await uploadDamageImagesForDraft(booking.id, carId, draft);
 
-      draft.selectedImages.forEach((image) => {
-        if (image.preview) {
-          URL.revokeObjectURL(image.preview);
-        }
-      });
-
-      updateCarDraft(carId, (current) => {
-        const mergedImageIds = Array.from(new Set([...current.linkedDamageImageIds, ...uploadedImageIds]));
-        return {
-          ...current,
-          linkedDamageImageIds: mergedImageIds,
-          selectedImages: [],
-          uploadedDamageImageCount: mergedImageIds.length,
-          hasNewDamage: true,
-        };
-      });
+      updateCarDraft(carId, (current) => ({
+        ...current,
+        linkedDamageImageIds: mergedImageIds,
+        selectedImages: [],
+        uploadedDamageImageCount: mergedImageIds.length,
+        hasNewDamage: true,
+      }));
 
       handleSuccess('Damage images uploaded', 'New damage evidence was stored for this car.');
     } catch (error) {
@@ -239,9 +249,43 @@ export default function PostTripDamageCapturePage() {
 
     setSaving(true);
     try {
+      const nextDrafts: Record<string, CarInspectionDraft> = { ...carDrafts };
+
+      for (const car of booking.cars) {
+        const draft = nextDrafts[car.id] ?? createEmptyDraft();
+        if (!draft.hasNewDamage || draft.selectedImages.length === 0) continue;
+
+        nextDrafts[car.id] = { ...draft, isUploading: true };
+        setCarDrafts((prev) => ({
+          ...prev,
+          [car.id]: { ...(prev[car.id] ?? createEmptyDraft()), isUploading: true },
+        }));
+
+        try {
+          const mergedImageIds = await uploadDamageImagesForDraft(booking.id, car.id, draft);
+          nextDrafts[car.id] = {
+            ...draft,
+            hasNewDamage: true,
+            linkedDamageImageIds: mergedImageIds,
+            selectedImages: [],
+            uploadedDamageImageCount: mergedImageIds.length,
+            isUploading: false,
+          };
+        } catch (error) {
+          nextDrafts[car.id] = { ...draft, isUploading: false };
+          setCarDrafts((prev) => ({
+            ...prev,
+            [car.id]: { ...(prev[car.id] ?? createEmptyDraft()), isUploading: false },
+          }));
+          throw error;
+        }
+      }
+
+      setCarDrafts(nextDrafts);
+
       const items = booking.cars
         .map((car) => {
-          const draft = carDrafts[car.id] ?? createEmptyDraft();
+          const draft = nextDrafts[car.id] ?? createEmptyDraft();
           return {
             carId: car.id,
             hasNewDamage: draft.hasNewDamage,
@@ -346,100 +390,121 @@ export default function PostTripDamageCapturePage() {
                       checked={draft.hasNewDamage}
                       disabled={!canEditInspection || saving}
                       onChange={(e) =>
-                        updateCarDraft(car.id, (current) => ({
-                          ...current,
-                          hasNewDamage: e.target.checked,
-                          linkedDamageImageIds: e.target.checked ? current.linkedDamageImageIds : [],
-                          uploadedDamageImageCount: e.target.checked ? current.uploadedDamageImageCount : 0,
-                        }))
+                        updateCarDraft(car.id, (current) => {
+                          if (e.target.checked) {
+                            return {
+                              ...current,
+                              hasNewDamage: true,
+                            };
+                          }
+
+                          current.selectedImages.forEach((image) => {
+                            if (image.preview) {
+                              URL.revokeObjectURL(image.preview);
+                            }
+                          });
+
+                          return {
+                            ...current,
+                            hasNewDamage: false,
+                            notes: '',
+                            selectedImages: [],
+                            linkedDamageImageIds: [],
+                            uploadedDamageImageCount: 0,
+                          };
+                        })
                       }
                     />
                     Has new damage
                   </label>
                 </div>
 
-                <textarea
-                  value={draft.notes}
-                  onChange={(e) =>
-                    updateCarDraft(car.id, (current) => ({
-                      ...current,
-                      notes: e.target.value,
-                    }))
-                  }
-                  disabled={!canEditInspection || saving}
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm"
-                  rows={2}
-                  placeholder="Damage notes for this car"
-                />
-
-                <div className="text-xs text-gray-600">
-                  Uploaded additional damage images: {draft.linkedDamageImageIds.length}
-                </div>
-
-                <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      disabled={!canEditInspection || saving || draft.isUploading}
-                      onChange={(e) => {
-                        handleSelectImages(car.id, e.target.files);
-                        e.currentTarget.value = '';
-                      }}
-                      className="text-sm"
+                {draft.hasNewDamage && (
+                  <>
+                    <textarea
+                      value={draft.notes}
+                      onChange={(e) =>
+                        updateCarDraft(car.id, (current) => ({
+                          ...current,
+                          notes: e.target.value,
+                        }))
+                      }
+                      disabled={!canEditInspection || saving}
+                      className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+                      rows={2}
+                      placeholder="Damage notes for this car"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!canEditInspection || saving || draft.isUploading || draft.selectedImages.length === 0}
-                      onClick={() => uploadCarDamageImages(car.id)}
-                    >
-                      {draft.isUploading ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <Upload className="w-4 h-4 mr-1" />
-                      )}
-                      Upload Selected Images
-                    </Button>
-                  </div>
 
-                  {draft.selectedImages.length > 0 && (
-                    <div className="space-y-2">
-                      {draft.selectedImages.map((image, index) => (
-                        <div key={`${car.id}-${index}`} className="border rounded-lg bg-white p-3 flex gap-3">
-                          <img
-                            src={image.preview}
-                            alt={`Damage preview ${index + 1}`}
-                            className="w-24 h-16 object-cover rounded border"
-                          />
-                          <div className="flex-1 space-y-1">
-                            <input
-                              value={image.description}
-                              onChange={(e) => updateImageDescription(car.id, index, e.target.value)}
-                              disabled={!canEditInspection || saving || draft.isUploading}
-                              className="w-full border border-gray-300 rounded p-2 text-sm"
-                              placeholder="Describe this damage image"
-                            />
-                            <p className="text-xs text-gray-500">
-                              {formatFileSize(image.compressedSize || image.file.size)}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            disabled={!canEditInspection || saving || draft.isUploading}
-                            onClick={() => removeSelectedImage(car.id, index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
+                    <div className="text-xs text-gray-600">
+                      Uploaded additional damage images: {draft.linkedDamageImageIds.length}
                     </div>
-                  )}
-                </div>
+
+                    <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          disabled={!canEditInspection || saving || draft.isUploading}
+                          onChange={(e) => {
+                            handleSelectImages(car.id, e.target.files);
+                            e.currentTarget.value = '';
+                          }}
+                          className="text-sm"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!canEditInspection || saving || draft.isUploading || draft.selectedImages.length === 0}
+                          onClick={() => uploadCarDamageImages(car.id)}
+                        >
+                          {draft.isUploading ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4 mr-1" />
+                          )}
+                          Upload Selected Images
+                        </Button>
+                      </div>
+
+                      {draft.selectedImages.length > 0 && (
+                        <div className="space-y-2">
+                          {draft.selectedImages.map((image, index) => (
+                            <div key={`${car.id}-${index}`} className="border rounded-lg bg-white p-3 flex gap-3">
+                              <img
+                                src={image.preview}
+                                alt={`Damage preview ${index + 1}`}
+                                className="w-24 h-16 object-cover rounded border"
+                              />
+                              <div className="flex-1 space-y-1">
+                                <input
+                                  value={image.description}
+                                  onChange={(e) => updateImageDescription(car.id, index, e.target.value)}
+                                  disabled={!canEditInspection || saving || draft.isUploading}
+                                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                                  placeholder="Describe this damage image"
+                                />
+                                <p className="text-xs text-gray-500">
+                                  {formatFileSize(image.compressedSize || image.file.size)}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={!canEditInspection || saving || draft.isUploading}
+                                onClick={() => removeSelectedImage(car.id, index)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}

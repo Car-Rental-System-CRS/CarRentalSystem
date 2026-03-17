@@ -35,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   })],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       // Initial sign in
       if (user) {
         token.accessToken = (user as any).accessToken;
@@ -48,6 +48,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.customRoleName = (user as any).customRoleName;
         token.scopes = (user as any).scopes;
       }
+
+      if (trigger === 'update' && session?.user) {
+        token.name = session.user.name;
+        token.email = session.user.email;
+        token.phone = session.user.phone;
+        token.baseRole = session.user.baseRole;
+        token.scopes = session.user.scopes;
+        token.customRoleId = session.user.customRoleId;
+        token.customRoleName = session.user.customRoleName;
+      }
+
       return token;
     },
     async session({ session, token }) {

@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import main.entities.Booking;
+import main.enums.BookingStatus;
 
 public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpecificationExecutor<Booking> {
     Optional<Booking> findById(UUID id);
@@ -42,4 +43,11 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     @Query("SELECT b FROM Booking b WHERE b.status = main.enums.BookingStatus.CONFIRMED " +
            "AND b.expectedReceiveDate < :cutoff")
     List<Booking> findConfirmedBookingsBeforePickupCutoff(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("SELECT b FROM Booking b WHERE b.status = :status " +
+           "AND b.actualReturnDate IS NULL AND b.expectedReturnDate < :cutoff")
+    List<Booking> findBookingsByStatusBeforeReturnCutoff(
+            @Param("status") BookingStatus status,
+            @Param("cutoff") LocalDateTime cutoff
+    );
 }

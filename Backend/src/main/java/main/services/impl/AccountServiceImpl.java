@@ -13,9 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import main.dtos.request.UpdateAccountProfileRequest;
 import main.dtos.response.AccountAdminResponse;
 import main.dtos.response.AccountResponse;
 import main.entities.Account;
+import main.exceptions.ConflictException;
 import main.entities.CustomRole;
 import main.entities.CustomRoleScope;
 import main.enums.Role;
@@ -47,25 +49,36 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountResponse me(UUID accountId) {
         Account acc = accountRepository.findById(accountId).orElseThrow();
-        Set<Scope> scopes = resolveScopes(acc);
+        return toAccountResponse(acc);
+    }
 
-        AccountResponse.CustomRoleInfo customRoleInfo = null;
-        if (acc.getCustomRole() != null) {
-            customRoleInfo = AccountResponse.CustomRoleInfo.builder()
-                    .id(acc.getCustomRole().getId())
-                    .name(acc.getCustomRole().getName())
-                    .build();
+    @Override
+    @Transactional
+    public AccountResponse updateMyProfile(UUID accountId, UpdateAccountProfileRequest request) {
+        Account acc = accountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        String name = normalizeRequired(request.getName(), "Name is required");
+        String email = normalizeRequired(request.getEmail(), "Email is required");
+        String phone = normalizeOptional(request.getPhone());
+
+        if (!isValidEmail(email)) {
+            throw new IllegalArgumentException("Email address is invalid");
         }
 
-        return AccountResponse.builder()
-                .id(acc.getId())
-                .name(acc.getName())
-                .email(acc.getEmail())
-                .phone(acc.getPhone())
-                .baseRole(acc.getRole())
-                .customRole(customRoleInfo)
-                .scopes(scopes.stream().map(Scope::name).collect(Collectors.toList()))
-                .build();
+        if (phone != null && !phone.matches("^[0-9+\\-\\s()]{10,20}$")) {
+            throw new IllegalArgumentException("Phone number format is invalid");
+        }
+
+        if (accountRepository.existsByEmailAndIdNot(email, accountId)) {
+            throw new ConflictException("Email address is already in use");
+        }
+
+        acc.setName(name);
+        acc.setEmail(email);
+        acc.setPhone(phone);
+
+        return toAccountResponse(accountRepository.save(acc));
     }
 
     @Override
@@ -151,6 +164,49 @@ public class AccountServiceImpl implements AccountService {
                 .createdAt(acc.getCreatedAt())
                 .modifiedAt(acc.getModifiedAt())
                 .build();
+    }
+
+    private AccountResponse toAccountResponse(Account acc) {
+        Set<Scope> scopes = resolveScopes(acc);
+
+        AccountResponse.CustomRoleInfo customRoleInfo = null;
+        if (acc.getCustomRole() != null) {
+            customRoleInfo = AccountResponse.CustomRoleInfo.builder()
+                    .id(acc.getCustomRole().getId())
+                    .name(acc.getCustomRole().getName())
+                    .build();
+        }
+
+        return AccountResponse.builder()
+                .id(acc.getId())
+                .name(acc.getName())
+                .email(acc.getEmail())
+                .phone(acc.getPhone())
+                .baseRole(acc.getRole())
+                .customRole(customRoleInfo)
+                .scopes(scopes.stream().map(Scope::name).collect(Collectors.toList()))
+                .build();
+    }
+
+    private String normalizeRequired(String value, String errorMessage) {
+        String normalized = normalizeOptional(value);
+        if (normalized == null) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        return normalized;
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private boolean isValidEmail(String email) {
+        return email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }
 
     /**

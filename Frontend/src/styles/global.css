@@ -167,3 +167,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+.gps-map-shell {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+}
+
+.gps-map {
+  position: relative;
+  z-index: 0;
+}
+
+.gps-map .leaflet-pane,
+.gps-map .leaflet-control,
+.gps-map .leaflet-top,
+.gps-map .leaflet-bottom {
+  z-index: 10 !important;
+}
+
+.gps-map .leaflet-popup {
+  z-index: 20 !important;
+}

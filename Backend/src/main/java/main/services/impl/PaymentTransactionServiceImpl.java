@@ -12,6 +12,7 @@ import main.dtos.response.PaymentTransactionResponse;
 import main.entities.Booking;
 import main.entities.PaymentTransaction;
 import main.enums.PaymentMethod;
+import main.enums.BookingNotificationEventType;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
 import main.mappers.PaymentTransactionMapper;
@@ -19,6 +20,7 @@ import main.repositories.BookingRepository;
 import main.repositories.PaymentTransactionRepository;
 import main.services.PaymentTransactionService;
 import main.services.PayosService;
+import main.services.BookingNotificationService;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PayosService payosService;
     private final PaymentTransactionMapper paymentTransactionMapper;
+    private final BookingNotificationService bookingNotificationService;
 
     @Override
     @Transactional
@@ -113,6 +116,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         booking.setRemainingAmount(BigDecimal.ZERO);
         booking.setStatus(main.enums.BookingStatus.COMPLETED);
         bookingRepository.save(booking);
+        bookingNotificationService.sendNotification(booking, BookingNotificationEventType.BOOKING_COMPLETED);
 
         return paymentTransactionMapper.toPaymentTransactionResponse(cashTransaction);
         }

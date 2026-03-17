@@ -13,16 +13,6 @@ public class BookingMapper {
     private final ModelMapper mapper;
 
     public BookingResponse toBookingResponseDto(Booking booking) {
-        BookingResponse response = mapper.map(booking, BookingResponse.class);
-        
-        // Ensure proper date conversion from LocalDateTime to LocalDate
-        if (booking.getExpectedReceiveDate() != null) {
-            response.setExpectedReceiveDate(booking.getExpectedReceiveDate().toLocalDate());
-        }
-        if (booking.getExpectedReturnDate() != null) {
-            response.setExpectedReturnDate(booking.getExpectedReturnDate().toLocalDate());
-        }
-        
-        return response;
+        return mapper.map(booking, BookingResponse.class);
     }
 }

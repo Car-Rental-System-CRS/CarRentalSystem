@@ -122,7 +122,7 @@ export default function Header() {
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <User className="w-4 h-4" />
-                        <span>Profile</span>
+                        <span>My Profile</span>
                       </Link>
                       <Link
                         href="/bookings"
@@ -253,7 +253,7 @@ export default function Header() {
                       className="flex items-center justify-center gap-2"
                     >
                       <User className="w-5 h-5" />
-                      Profile
+                      My Profile
                     </Link>
                   </Button>
 

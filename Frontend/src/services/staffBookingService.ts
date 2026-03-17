@@ -24,6 +24,23 @@ export interface StaffMediaFile {
   modifiedAt: string;
 }
 
+export interface BookingNotificationResponse {
+  id: string;
+  eventType:
+    | 'BOOKING_CONFIRMED'
+    | 'VEHICLE_PICKED_UP'
+    | 'VEHICLE_RETURNED'
+    | 'OVERDUE_WARNING'
+    | 'BOOKING_COMPLETED';
+  recipientEmail: string | null;
+  deliveryStatus: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
+  attemptCount: number;
+  triggeredAt: string;
+  lastAttemptAt: string | null;
+  sentAt: string | null;
+  failureReason: string | null;
+}
+
 export interface AdminBookingResponse {
   id: string;
   cars: {
@@ -66,6 +83,7 @@ export interface AdminBookingResponse {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  notifications: BookingNotificationResponse[];
 }
 
 export interface PostTripInspectionItemRequest {

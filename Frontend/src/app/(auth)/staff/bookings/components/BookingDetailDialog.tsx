@@ -25,17 +25,30 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(dateStr: string): string {
+function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('vi-VN', {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Bangkok',
   });
+
+  const parts = formatter.formatToParts(new Date(dateStr));
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+
+  return `${getPart('hour')}:${getPart('minute')} ${getPart('day')}/${getPart('month')}/${getPart('year')}`;
 }
 
 export default function BookingDetailDialog({ booking, open, onClose }: Props) {
   if (!booking) return null;
+
+  const formatEventLabel = (value: string) =>
+    value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -90,7 +103,7 @@ export default function BookingDetailDialog({ booking, open, onClose }: Props) {
                   Pickup Date
                 </div>
                 <span className="font-medium text-sm">
-                  {formatDate(booking.expectedReceiveDate)}
+                  {formatDateTime(booking.expectedReceiveDate)}
                 </span>
               </div>
               <div className="bg-gray-50 rounded-lg p-3">
@@ -99,7 +112,7 @@ export default function BookingDetailDialog({ booking, open, onClose }: Props) {
                   Return Date
                 </div>
                 <span className="font-medium text-sm">
-                  {formatDate(booking.expectedReturnDate)}
+                  {formatDateTime(booking.expectedReturnDate)}
                 </span>
               </div>
             </div>
@@ -189,6 +202,54 @@ export default function BookingDetailDialog({ booking, open, onClose }: Props) {
                         </span>
                         <PaymentStatusBadge status={payment.status as 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED'} />
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {booking.notifications && booking.notifications.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                  Email Notifications ({booking.notifications.length})
+                </h4>
+                <div className="space-y-2">
+                  {booking.notifications.map((notification) => (
+                    <div key={notification.id} className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium">
+                          {formatEventLabel(notification.eventType)}
+                        </span>
+                        <span
+                          className={`text-xs font-semibold uppercase ${
+                            notification.deliveryStatus === 'SENT'
+                              ? 'text-green-600'
+                              : notification.deliveryStatus === 'FAILED'
+                                ? 'text-red-600'
+                                : notification.deliveryStatus === 'SKIPPED'
+                                  ? 'text-amber-600'
+                                  : 'text-gray-500'
+                          }`}
+                        >
+                          {notification.deliveryStatus}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Triggered: {formatDateTime(notification.triggeredAt)}
+                      </div>
+                      {notification.sentAt && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          Sent: {formatDateTime(notification.sentAt)}
+                        </div>
+                      )}
+                      {notification.failureReason && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {notification.failureReason}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

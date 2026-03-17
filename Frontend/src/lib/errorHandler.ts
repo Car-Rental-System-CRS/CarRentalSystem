@@ -17,6 +17,7 @@ export interface ApiErrorResponse {
  */
 export enum ErrorType {
   VALIDATION = 'VALIDATION',
+  CONFLICT = 'CONFLICT',
   AUTHENTICATION = 'AUTHENTICATION',
   AUTHORIZATION = 'AUTHORIZATION',
   NOT_FOUND = 'NOT_FOUND',
@@ -36,6 +37,7 @@ export const getErrorType = (statusCode?: number): ErrorType => {
       if (statusCode === 401) return ErrorType.AUTHENTICATION;
       if (statusCode === 403) return ErrorType.AUTHORIZATION;
       if (statusCode === 404) return ErrorType.NOT_FOUND;
+      if (statusCode === 409) return ErrorType.CONFLICT;
       if (statusCode === 422) return ErrorType.VALIDATION;
       return ErrorType.VALIDATION;
     case statusCode >= 500:
@@ -118,6 +120,12 @@ export const handleError = (error: unknown, customMessage?: string): void => {
       break;
     case ErrorType.VALIDATION:
       toast.error('Validation Error', {
+        description: message,
+        duration: 4000,
+      });
+      break;
+    case ErrorType.CONFLICT:
+      toast.error('Update Conflict', {
         description: message,
         duration: 4000,
       });

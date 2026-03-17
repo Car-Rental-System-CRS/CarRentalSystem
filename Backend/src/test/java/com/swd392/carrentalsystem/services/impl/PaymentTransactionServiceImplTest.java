@@ -24,11 +24,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import main.dtos.response.PaymentTransactionResponse;
 import main.entities.Booking;
 import main.entities.PaymentTransaction;
+import main.enums.BookingNotificationEventType;
+import main.enums.BookingStatus;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
 import main.mappers.PaymentTransactionMapper;
 import main.repositories.BookingRepository;
 import main.repositories.PaymentTransactionRepository;
+import main.services.BookingNotificationService;
 import main.services.PayosService;
 import main.services.impl.PaymentTransactionServiceImpl;
 
@@ -46,6 +49,9 @@ class PaymentTransactionServiceImplTest {
 
     @Mock
     private PaymentTransactionMapper paymentTransactionMapper;
+
+    @Mock
+    private BookingNotificationService bookingNotificationService;
 
     @InjectMocks
     private PaymentTransactionServiceImpl paymentTransactionService;
@@ -119,6 +125,36 @@ class PaymentTransactionServiceImplTest {
         verify(paymentTransactionRepository, never()).save(any(PaymentTransaction.class));
         verifyNoInteractions(payosService);
     }
-}
 
+    @Test
+    void settleFinalPaymentByCash_ShouldCompleteBookingAndSendNotification() {
+        UUID bookingId = UUID.randomUUID();
+        Booking booking = new Booking();
+        booking.setId(bookingId);
+        booking.setActualReturnDate(java.time.LocalDateTime.now());
+        booking.setRemainingAmount(BigDecimal.valueOf(250_000));
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+
+        PaymentTransactionResponse response = new PaymentTransactionResponse();
+
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(paymentTransactionRepository.findFirstByBooking_IdAndPurposeAndStatusOrderByCreatedAtDesc(
+                bookingId,
+                PaymentPurpose.FINAL_PAYMENT,
+                PaymentStatus.PENDING
+        )).thenReturn(Optional.empty());
+        when(paymentTransactionRepository.save(any(PaymentTransaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(paymentTransactionMapper.toPaymentTransactionResponse(any(PaymentTransaction.class)))
+                .thenReturn(response);
+
+        PaymentTransactionResponse result = paymentTransactionService.settleFinalPaymentByCash(bookingId);
+
+        assertNotNull(result);
+        assertEquals(BigDecimal.ZERO, booking.getRemainingAmount());
+        assertEquals(BookingStatus.COMPLETED, booking.getStatus());
+        verify(bookingNotificationService).sendNotification(booking, BookingNotificationEventType.BOOKING_COMPLETED);
+        verify(bookingRepository).save(booking);
+    }
+}
 

@@ -13,10 +13,12 @@ import lombok.RequiredArgsConstructor;
 import main.entities.Booking;
 import main.entities.PaymentTransaction;
 import main.enums.BookingStatus;
+import main.enums.BookingNotificationEventType;
 import main.enums.PaymentPurpose;
 import main.enums.PaymentStatus;
 import main.repositories.PaymentTransactionRepository;
 import main.services.PayosService;
+import main.services.BookingNotificationService;
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
@@ -28,6 +30,7 @@ public class PayosServiceImpl implements PayosService {
 
     private final PayOS payOS;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final BookingNotificationService bookingNotificationService;
 
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
@@ -99,6 +102,7 @@ public class PayosServiceImpl implements PayosService {
                 // Deposit payment — move CREATED → CONFIRMED
                 if (booking.getStatus() == BookingStatus.CREATED) {
                     booking.setStatus(BookingStatus.CONFIRMED);
+                    bookingNotificationService.sendNotification(booking, BookingNotificationEventType.BOOKING_CONFIRMED);
                 }
             } else if (purpose == PaymentPurpose.OVERDUE_PAYMENT || purpose == PaymentPurpose.FINAL_PAYMENT) {
                 BigDecimal remaining = booking.getRemainingAmount() == null
@@ -118,6 +122,7 @@ public class PayosServiceImpl implements PayosService {
                         && updatedRemaining.compareTo(BigDecimal.ZERO) <= 0
                         && Boolean.TRUE.equals(booking.getPostTripInspectionCompleted())) {
                     booking.setStatus(BookingStatus.COMPLETED);
+                    bookingNotificationService.sendNotification(booking, BookingNotificationEventType.BOOKING_COMPLETED);
                 }
             }
 

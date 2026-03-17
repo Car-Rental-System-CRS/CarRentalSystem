@@ -2,6 +2,7 @@ package main.services;
 
 import main.dtos.response.AccountAdminResponse;
 import main.dtos.response.AccountResponse;
+import main.dtos.request.UpdateAccountProfileRequest;
 import main.entities.Account;
 
 import java.util.Optional;
@@ -18,6 +19,7 @@ public interface AccountService extends UserDetailsService {
     Optional<Account> findByEmail(String email);
     Account save(Account account);
     AccountResponse me(UUID accountId);
+    AccountResponse updateMyProfile(UUID accountId, UpdateAccountProfileRequest request);
     @Override
     CustomUserDetails loadUserByUsername(String accountId);
     Page<AccountAdminResponse> getAllUsers(Pageable pageable, String search, Role baseRole);

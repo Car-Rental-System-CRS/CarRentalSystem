@@ -54,6 +54,7 @@ export default function GpsMapView({ tracks }: Props) {
 
   return (
     <MapContainer
+      className="gps-map"
       center={center as [number, number]}
       zoom={14}
       style={{ height: '100%', width: '100%' }}

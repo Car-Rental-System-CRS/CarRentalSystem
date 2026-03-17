@@ -35,25 +35,30 @@ import main.dtos.response.PostTripInspectionResponse;
 import main.entities.Account;
 import main.entities.Booking;
 import main.entities.BookingCar;
+import main.entities.BookingNotification;
 import main.entities.Car;
 import main.entities.MediaFile;
 import main.entities.PostTripInspection;
 import main.entities.PostTripInspectionItem;
 import main.enums.BookingStatus;
+import main.enums.BookingNotificationEventType;
 import main.enums.DamageSource;
 import main.enums.MediaCategory;
 import main.enums.PaymentPurpose;
 import main.mappers.BookingMapper;
 import main.mappers.CarMapper;
 import main.mappers.MediaFileMapper;
+import main.mappers.BookingNotificationMapper;
 import main.repositories.AccountRepository;
 import main.repositories.BookingCarRepository;
+import main.repositories.BookingNotificationRepository;
 import main.repositories.BookingRepository;
 import main.repositories.CarRepository;
 import main.repositories.CarTypeRepository;
 import main.repositories.MediaFileRepository;
 import main.repositories.PostTripInspectionRepository;
 import main.services.BookingService;
+import main.services.BookingNotificationService;
 import main.services.MediaFileService;
 import main.services.PaymentTransactionService;
 
@@ -68,9 +73,12 @@ public class BookingServiceImpl implements BookingService {
     private final CarRepository carRepository;
     private final CarTypeRepository carTypeRepository;
     private final AccountRepository accountRepository;
+    private final BookingNotificationRepository bookingNotificationRepository;
     private final PostTripInspectionRepository postTripInspectionRepository;
     private final MediaFileRepository mediaFileRepository;
     private final MediaFileService mediaFileService;
+    private final BookingNotificationService bookingNotificationService;
+    private final BookingNotificationMapper bookingNotificationMapper;
 
 
     //===DEFINE BUSINESS RULES:====
@@ -88,7 +96,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request, UUID accountId) {
-
         LocalDateTime pickup = request.getExpectedReceiveDate();
         LocalDateTime returnDt = request.getExpectedReturnDate();
         
@@ -374,6 +381,7 @@ public class BookingServiceImpl implements BookingService {
         }
         booking.setStatus(BookingStatus.IN_PROGRESS);
         bookingRepository.save(booking);
+        bookingNotificationService.sendNotification(booking, BookingNotificationEventType.VEHICLE_PICKED_UP);
 
         return toAdminBookingResponse(booking);
     }
@@ -427,6 +435,8 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.IN_PROGRESS);
             bookingRepository.save(booking);
         }
+
+        bookingNotificationService.sendNotification(booking, BookingNotificationEventType.VEHICLE_RETURNED);
 
         return toAdminBookingResponse(booking);
     }
@@ -654,6 +664,8 @@ public class BookingServiceImpl implements BookingService {
         response.setRemainingAmount(booking.getRemainingAmount());
         response.setOverdueCharge(booking.getOverdueCharge());
         response.setStatus(booking.getStatus());
+        response.setExpectedReceiveDate(booking.getExpectedReceiveDate());
+        response.setExpectedReturnDate(booking.getExpectedReturnDate());
         response.setActualReceiveDate(booking.getActualReceiveDate());
         response.setActualReturnDate(booking.getActualReturnDate());
         response.setPickupNotes(booking.getPickupNotes());
@@ -664,13 +676,8 @@ public class BookingServiceImpl implements BookingService {
                 ? LocalDateTime.ofInstant(booking.getCreatedAt(), java.time.ZoneId.systemDefault())
                 : null);
         response.setPayments(paymentTransactionService.getAllByBookingId(booking.getId()));
-
-        if (booking.getExpectedReceiveDate() != null) {
-            response.setExpectedReceiveDate(booking.getExpectedReceiveDate().toLocalDate());
-        }
-        if (booking.getExpectedReturnDate() != null) {
-            response.setExpectedReturnDate(booking.getExpectedReturnDate().toLocalDate());
-        }
+        List<BookingNotification> notifications = bookingNotificationRepository.findByBooking_IdOrderByTriggeredAtDesc(booking.getId());
+        response.setNotifications(bookingNotificationMapper.toResponseList(notifications));
 
         // Customer info
         Account account = booking.getAccount();

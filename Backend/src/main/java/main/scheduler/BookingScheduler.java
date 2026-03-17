@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import main.entities.Booking;
 import main.enums.BookingStatus;
 import main.repositories.BookingRepository;
+import main.enums.BookingNotificationEventType;
+import main.services.BookingNotificationService;
 
 @Component
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ public class BookingScheduler {
     private static final Logger log = LoggerFactory.getLogger(BookingScheduler.class);
 
     private final BookingRepository bookingRepository;
+    private final BookingNotificationService bookingNotificationService;
 
     /**
      * Runs every hour. Cancels CONFIRMED bookings whose expected pickup date
@@ -43,6 +46,24 @@ public class BookingScheduler {
 
         if (!overdueBookings.isEmpty()) {
             log.info("Auto-cancelled {} overdue booking(s)", overdueBookings.size());
+        }
+    }
+
+    @Scheduled(fixedRate = 3600000)
+    @Transactional
+    public void notifyOverdueReturns() {
+        LocalDateTime cutoff = LocalDateTime.now();
+        List<Booking> overdueBookings = bookingRepository.findBookingsByStatusBeforeReturnCutoff(
+                BookingStatus.IN_PROGRESS,
+                cutoff
+        );
+
+        for (Booking booking : overdueBookings) {
+            bookingNotificationService.sendNotification(booking, BookingNotificationEventType.OVERDUE_WARNING);
+        }
+
+        if (!overdueBookings.isEmpty()) {
+            log.info("Processed {} overdue return warning notification(s)", overdueBookings.size());
         }
     }
 }

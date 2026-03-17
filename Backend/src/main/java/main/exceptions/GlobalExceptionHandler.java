@@ -22,4 +22,16 @@ public class GlobalExceptionHandler {
                         .build()
         );
     }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<APIResponse<Object>> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                APIResponse.builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .error("CONFLICT")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
 }

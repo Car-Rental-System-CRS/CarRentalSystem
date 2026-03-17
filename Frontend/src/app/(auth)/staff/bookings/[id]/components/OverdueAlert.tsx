@@ -15,7 +15,10 @@ function formatCurrency(amount: number): string {
 }
 
 export default function OverdueAlert({ booking }: Props) {
-  if (!booking.overdueCharge || booking.overdueCharge <= 0) return null;
+  const overdueNotification = booking.notifications?.find(
+    (notification) => notification.eventType === 'OVERDUE_WARNING'
+  );
+  if ((!booking.overdueCharge || booking.overdueCharge <= 0) && !overdueNotification) return null;
 
   // Calculate overdue duration
   let overdueText = '';
@@ -38,7 +41,7 @@ export default function OverdueAlert({ booking }: Props) {
       <AlertTriangle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
       <div>
         <h3 className="text-base font-semibold text-orange-800">
-          Overdue Charges: {formatCurrency(booking.overdueCharge)}
+          Overdue Charges: {formatCurrency(booking.overdueCharge ?? 0)}
         </h3>
         {overdueText && (
           <p className="text-sm text-orange-700 mt-1">{overdueText}</p>
@@ -46,6 +49,12 @@ export default function OverdueAlert({ booking }: Props) {
         <p className="text-sm text-orange-600 mt-1">
           An overdue payment transaction has been created. The booking will complete once the renter pays.
         </p>
+        {overdueNotification && (
+          <p className="text-sm text-orange-700 mt-1">
+            Warning email status: {overdueNotification.deliveryStatus}
+            {overdueNotification.failureReason ? ` (${overdueNotification.failureReason})` : ''}
+          </p>
+        )}
       </div>
     </div>
   );

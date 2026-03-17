@@ -81,6 +81,13 @@ public class Booking extends AuditableEntity {
     )
     private List<PaymentTransaction> paymentTransactions;
 
+    @OneToMany(
+            mappedBy = "booking",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<BookingNotification> notifications;
+
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private PostTripInspection postTripInspection;
 
