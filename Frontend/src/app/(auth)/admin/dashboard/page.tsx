@@ -1,90 +1,60 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { format, subDays, subMonths } from 'date-fns';
 import {
-  AreaChart,
   Area,
-  BarChart,
+  AreaChart,
   Bar,
-  PieChart,
-  Pie,
+  BarChart,
+  CartesianGrid,
   Cell,
-  LineChart,
+  Legend,
   Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { dashboardService } from '@/services/dashboardService';
-import { DashboardStats } from '@/types/dashboard';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
-const COLORS = [
-  '#8b5cf6',
-  '#06b6d4',
-  '#f59e0b',
-  '#ef4444',
-  '#10b981',
-  '#6366f1',
-  '#ec4899',
-  '#14b8a6',
-];
+import { DashboardHeader, PresetRange } from '@/components/admin-dashboard/DashboardHeader';
+import { DistributionSection } from '@/components/admin-dashboard/DistributionSection';
+import { RecentBookingsPanel } from '@/components/admin-dashboard/RecentBookingsPanel';
+import { RecentPaymentsPanel } from '@/components/admin-dashboard/RecentPaymentsPanel';
+import { SummaryCards } from '@/components/admin-dashboard/SummaryCards';
+import { TrendSection } from '@/components/admin-dashboard/TrendSection';
+import { Button } from '@/components/ui/Button';
+import { dashboardService } from '@/services/dashboardService';
+import {
+  formatChartCurrency,
+  formatCompactNumber,
+  formatCurrency,
+} from '@/lib/dashboard';
+import { DashboardStats } from '@/types/dashboard';
 
 const BOOKING_STATUS_COLORS: Record<string, string> = {
-  CREATED: '#6366f1',
-  CONFIRMED: '#06b6d4',
-  IN_PROGRESS: '#f59e0b',
-  COMPLETED: '#10b981',
-  CANCELED: '#ef4444',
+  CREATED: '#4f46e5',
+  CONFIRMED: '#0284c7',
+  IN_PROGRESS: '#d97706',
+  COMPLETED: '#059669',
+  CANCELED: '#e11d48',
 };
 
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  PENDING: '#f59e0b',
-  PAID: '#10b981',
-  CANCELLED: '#ef4444',
-  EXPIRED: '#6b7280',
+  PENDING: '#d97706',
+  PAID: '#059669',
+  CANCELLED: '#e11d48',
+  EXPIRED: '#64748b',
 };
-
-type PresetRange =
-  | '7d'
-  | '30d'
-  | '3m'
-  | '6m'
-  | '12m'
-  | 'all'
-  | 'custom';
 
 function getPresetDates(preset: PresetRange): { start: Date; end: Date } | null {
   const now = new Date();
+
   switch (preset) {
     case '7d':
       return { start: subDays(now, 7), end: now };
@@ -97,43 +67,30 @@ function getPresetDates(preset: PresetRange): { start: Date; end: Date } | null 
     case '12m':
       return { start: subMonths(now, 12), end: now };
     case 'all':
-      return null; // no filter
+      return { start: new Date('2000-01-01T00:00:00.000Z'), end: now };
     case 'custom':
       return null;
   }
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [preset, setPreset] = useState<PresetRange>('12m');
-  const [customRange, setCustomRange] = useState<DateRange | undefined>(
-    undefined
-  );
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       let startDate: string | undefined;
       let endDate: string | undefined;
 
       if (preset === 'custom' && customRange?.from) {
         startDate = customRange.from.toISOString();
-        endDate = customRange.to
-          ? customRange.to.toISOString()
-          : new Date().toISOString();
+        endDate = (customRange.to ?? new Date()).toISOString();
       } else if (preset !== 'all') {
         const dates = getPresetDates(preset);
         if (dates) {
@@ -144,30 +101,30 @@ export default function AdminDashboardPage() {
 
       const data = await dashboardService.getStats({ startDate, endDate });
       setStats(data);
-    } catch (err) {
+    } catch (fetchError) {
+      console.error(fetchError);
       setError('Failed to load dashboard data');
-      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [preset, customRange]);
+  }, [customRange, preset]);
 
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  if (loading) {
+  if (loading && !stats) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-700" />
       </div>
     );
   }
 
-  if (error || !stats) {
+  if (error && !stats) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <p className="text-red-500">{error || 'No data available'}</p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <p className="text-rose-600">{error}</p>
         <Button onClick={fetchDashboard} variant="outline">
           Retry
         </Button>
@@ -175,397 +132,223 @@ export default function AdminDashboardPage() {
     );
   }
 
+  if (!stats) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header + Time Range Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <DashboardHeader
+        customRange={customRange}
+        onCustomRangeChange={setCustomRange}
+        onPresetChange={setPreset}
+        preset={preset}
+        reportingPeriod={stats.reportingPeriod}
+      />
 
-        <div className="flex items-center gap-3">
-          <Select
-            value={preset}
-            onValueChange={(val) => setPreset(val as PresetRange)}
+      {error && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Showing the last successful dashboard snapshot. Refresh failed with:
+          {' '}
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+          Refreshing dashboard for
+          {' '}
+          {stats.reportingPeriod.label.toLowerCase()}
+          ...
+        </div>
+      )}
+
+      <SummaryCards cards={stats.summaryCards} />
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+          <TrendSection
+            description="Track revenue performance over the selected reporting period."
+            emptyMessage="No revenue activity in this reporting period."
+            hasData={stats.revenueByMonth.length > 0}
+            title="Revenue trend"
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="3m">Last 3 months</SelectItem>
-              <SelectItem value="6m">Last 6 months</SelectItem>
-              <SelectItem value="12m">Last 12 months</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-              <SelectItem value="custom">Custom range</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {preset === 'custom' && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'justify-start text-left font-normal',
-                    !customRange && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {customRange?.from ? (
-                    customRange.to ? (
-                      <>
-                        {format(customRange.from, 'LLL dd, y')} –{' '}
-                        {format(customRange.to, 'LLL dd, y')}
-                      </>
-                    ) : (
-                      format(customRange.from, 'LLL dd, y')
-                    )
-                  ) : (
-                    <span>Pick dates</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={customRange?.from}
-                  selected={customRange}
-                  onSelect={setCustomRange}
-                  numberOfMonths={2}
+            <ResponsiveContainer height={320} width="100%">
+              <AreaChart data={stats.revenueByMonth}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="5%" stopColor="#0f766e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0f766e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatCompactNumber(value)}
                 />
-              </PopoverContent>
-            </Popover>
-          )}
+                <Tooltip
+                  formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Revenue']}
+                />
+                <Area
+                  dataKey="revenue"
+                  fill="url(#revenueGradient)"
+                  stroke="#0f766e"
+                  strokeWidth={2.5}
+                  type="monotone"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </TrendSection>
+        </div>
+
+        <div className="xl:col-span-2">
+          <DistributionSection
+            description="Check whether booking lifecycle states are balanced or drifting."
+            emptyMessage="No booking status data in this reporting period."
+            hasData={stats.bookingsByStatus.length > 0}
+            title="Booking distribution"
+          >
+            <ResponsiveContainer height={320} width="100%">
+              <PieChart>
+                <Pie
+                  data={stats.bookingsByStatus}
+                  dataKey="count"
+                  nameKey="status"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={104}
+                  labelLine={false}
+                >
+                  {stats.bookingsByStatus.map((entry) => (
+                    <Cell
+                      key={entry.status}
+                      fill={BOOKING_STATUS_COLORS[entry.status] || '#64748b'}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </DistributionSection>
         </div>
       </div>
 
-      {/* Row 1: Revenue Over Time + Booking Status Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Revenue Over Time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.revenueByMonth.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                No revenue data
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={stats.revenueByMonth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v) =>
-                      `${(v / 1_000_000).toFixed(1)}M`
-                    }
-                  />
-                  <Tooltip
-                    formatter={(value: number) => [
-                      formatCurrency(value),
-                      'Revenue',
-                    ]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#8b5cf6"
-                    fill="#8b5cf6"
-                    fillOpacity={0.2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+          <TrendSection
+            description="Monitor booking volume across the same reporting window."
+            emptyMessage="No booking volume data in this reporting period."
+            hasData={stats.bookingsByMonth.length > 0}
+            title="Booking creation trend"
+          >
+            <ResponsiveContainer height={320} width="100%">
+              <BarChart data={stats.bookingsByMonth}>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#1d4ed8" radius={[12, 12, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </TrendSection>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Booking Status Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.bookingsByStatus.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                No booking data
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats.bookingsByStatus}
-                    dataKey="count"
-                    nameKey="status"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ status, count }) => `${status} (${count})`}
-                  >
-                    {stats.bookingsByStatus.map((entry) => (
-                      <Cell
-                        key={entry.status}
-                        fill={
-                          BOOKING_STATUS_COLORS[entry.status] || '#6b7280'
-                        }
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <div className="xl:col-span-2">
+          <TrendSection
+            description="See which vehicle categories are driving booking concentration."
+            emptyMessage="No car type demand data in this reporting period."
+            hasData={stats.topCarTypes.length > 0}
+            title="Top car types"
+          >
+            <ResponsiveContainer height={320} width="100%">
+              <BarChart data={stats.topCarTypes} layout="vertical">
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis
+                  dataKey="carTypeName"
+                  tick={{ fontSize: 12 }}
+                  type="category"
+                  width={120}
+                />
+                <Tooltip />
+                <Bar dataKey="count" fill="#c2410c" radius={[0, 12, 12, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </TrendSection>
+        </div>
       </div>
 
-      {/* Row 2: Bookings Over Time + Top Car Types */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Bookings Over Time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.bookingsByMonth.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                No booking data
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats.bookingsByMonth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+          <TrendSection
+            description="Track customer registration momentum during the selected period."
+            emptyMessage="No new customer registrations in this reporting period."
+            hasData={stats.userRegistrationsByMonth.length > 0}
+            title="Customer growth"
+          >
+            <ResponsiveContainer height={320} width="100%">
+              <LineChart data={stats.userRegistrationsByMonth}>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Line
+                  dataKey="count"
+                  dot={{ r: 4 }}
+                  stroke="#7c3aed"
+                  strokeWidth={2.5}
+                  type="monotone"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </TrendSection>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Top Car Types by Bookings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.topCarTypes.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                No car type data
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats.topCarTypes} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="carTypeName"
-                    tick={{ fontSize: 12 }}
-                    width={120}
-                  />
-                  <Tooltip />
-                  <Bar
-                    dataKey="count"
-                    fill="#f59e0b"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Row 3: User Registrations + Payment Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              User Registrations Over Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.userRegistrationsByMonth.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                No registration data
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={stats.userRegistrationsByMonth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Payment Status Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.paymentsByStatus.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">
-                No payment data
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats.paymentsByStatus}
-                    dataKey="count"
-                    nameKey="status"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    label={({ status, count }) => `${status} (${count})`}
-                  >
-                    {stats.paymentsByStatus.map((entry) => (
-                      <Cell
-                        key={entry.status}
-                        fill={
-                          PAYMENT_STATUS_COLORS[entry.status] || '#6b7280'
-                        }
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Row 4: Recent Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent Bookings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.recentBookings.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No recent bookings
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Car Type</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stats.recentBookings.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell className="font-medium">
-                        {b.customerName}
-                      </TableCell>
-                      <TableCell>{b.carTypeName || '—'}</TableCell>
-                      <TableCell>{formatCurrency(b.totalPrice)}</TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-                            b.status === 'COMPLETED' &&
-                              'bg-green-100 text-green-700',
-                            b.status === 'CONFIRMED' &&
-                              'bg-cyan-100 text-cyan-700',
-                            b.status === 'IN_PROGRESS' &&
-                              'bg-yellow-100 text-yellow-700',
-                            b.status === 'CREATED' &&
-                              'bg-indigo-100 text-indigo-700',
-                            b.status === 'CANCELED' &&
-                              'bg-red-100 text-red-700'
-                          )}
-                        >
-                          {b.status}
-                        </span>
-                      </TableCell>
-                    </TableRow>
+        <div className="xl:col-span-2">
+          <DistributionSection
+            description="Review transaction outcomes to spot payment backlog or failure risk."
+            emptyMessage="No payment status data in this reporting period."
+            hasData={stats.paymentsByStatus.length > 0}
+            title="Payment health"
+          >
+            <ResponsiveContainer height={320} width="100%">
+              <PieChart>
+                <Pie
+                  data={stats.paymentsByStatus}
+                  dataKey="count"
+                  nameKey="status"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={56}
+                  outerRadius={104}
+                  labelLine={false}
+                >
+                  {stats.paymentsByStatus.map((entry) => (
+                    <Cell
+                      key={entry.status}
+                      fill={PAYMENT_STATUS_COLORS[entry.status] || '#64748b'}
+                    />
                   ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </DistributionSection>
+        </div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.recentPayments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No recent payments
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Purpose</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stats.recentPayments.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">
-                        {formatCurrency(p.amount)}
-                      </TableCell>
-                      <TableCell>
-                        {p.purpose === 'BOOKING_PAYMENT'
-                          ? 'Booking'
-                          : 'Final'}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-                            p.status === 'PAID' &&
-                              'bg-green-100 text-green-700',
-                            p.status === 'PENDING' &&
-                              'bg-yellow-100 text-yellow-700',
-                            p.status === 'CANCELLED' &&
-                              'bg-red-100 text-red-700',
-                            p.status === 'EXPIRED' &&
-                              'bg-gray-100 text-gray-700'
-                          )}
-                        >
-                          {p.status}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
+        <RecentBookingsPanel bookings={stats.recentBookings} />
+        <RecentPaymentsPanel payments={stats.recentPayments} />
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">
+        Last reporting refresh:{' '}
+        {format(new Date(stats.reportingPeriod.endDate), 'MMM dd, yyyy h:mm a')}
+        {' '}• Currency tooltips use detailed values ({formatChartCurrency(128000)})
       </div>
     </div>
   );

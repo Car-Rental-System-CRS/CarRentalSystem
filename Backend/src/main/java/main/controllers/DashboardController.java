@@ -29,11 +29,13 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate
     ) {
-        // Default: last 12 months if not provided
         if (endDate == null) {
             endDate = Instant.now();
         }
         if (startDate == null) {
+            startDate = endDate.minus(365, ChronoUnit.DAYS);
+        }
+        if (startDate.isAfter(endDate)) {
             startDate = endDate.minus(365, ChronoUnit.DAYS);
         }
 

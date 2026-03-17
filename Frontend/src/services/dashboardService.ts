@@ -8,11 +8,13 @@ interface APIResponse<T> {
   timestamp: string;
 }
 
+export interface DashboardStatsParams {
+  startDate?: string;
+  endDate?: string;
+}
+
 export const dashboardService = {
-  getStats: async (params?: {
-    startDate?: string;
-    endDate?: string;
-  }): Promise<DashboardStats> => {
+  getStats: async (params?: DashboardStatsParams): Promise<DashboardStats> => {
     const response = await axios.get<APIResponse<DashboardStats>>(
       '/api/admin/dashboard',
       {

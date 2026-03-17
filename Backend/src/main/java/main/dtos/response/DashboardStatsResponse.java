@@ -16,6 +16,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class DashboardStatsResponse {
 
+    private ReportingPeriod reportingPeriod;
+    private List<SummaryCard> summaryCards;
     private List<MonthlyRevenue> revenueByMonth;
     private List<StatusCount> bookingsByStatus;
     private List<MonthlyCount> bookingsByMonth;
@@ -24,6 +26,35 @@ public class DashboardStatsResponse {
     private List<MonthlyCount> userRegistrationsByMonth;
     private List<RecentBooking> recentBookings;
     private List<RecentPayment> recentPayments;
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ReportingPeriod {
+        private String label;
+        private String startDate;
+        private String endDate;
+        private String comparisonLabel;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class SummaryCard {
+        private String key;
+        private String title;
+        private BigDecimal value;
+        private String valueDisplay;
+        private BigDecimal comparisonValue;
+        private String comparisonDirection;
+        private String comparisonDeltaDisplay;
+        private String attentionState;
+        private String supportingLabel;
+    }
 
     @Getter
     @Setter
@@ -78,6 +109,7 @@ public class DashboardStatsResponse {
         private String expectedReturnDate;
         private BigDecimal totalPrice;
         private String status;
+        private String detailHref;
     }
 
     @Getter
@@ -92,5 +124,6 @@ public class DashboardStatsResponse {
         private String purpose;
         private String status;
         private String createdAt;
+        private String detailHref;
     }
 }

@@ -37,24 +37,23 @@ public interface PaymentTransactionRepository
     boolean existsByBookingIdAndPurpose(UUID bookingId, PaymentPurpose purpose);
 
     // Dashboard: revenue by month (PAID only) within date range
-    @Query(value = "SELECT FORMAT(b.created_at, 'yyyy-MM') AS month, SUM(pt.amount) AS revenue " +
+    @Query(value = "SELECT FORMAT(pt.created_at, 'yyyy-MM') AS month, SUM(pt.amount) AS revenue " +
            "FROM payment_transactions pt " +
-           "JOIN bookings b ON pt.booking_id = b.id " +
            "WHERE pt.status = 'PAID' " +
-           "AND b.created_at >= :start AND b.created_at <= :end " +
-           "GROUP BY FORMAT(b.created_at, 'yyyy-MM') " +
+           "AND pt.created_at >= :start AND pt.created_at <= :end " +
+           "GROUP BY FORMAT(pt.created_at, 'yyyy-MM') " +
            "ORDER BY month", nativeQuery = true)
     List<Object[]> revenueByMonthBetween(@Param("start") java.time.Instant start, @Param("end") java.time.Instant end);
 
     // Dashboard: payments grouped by status within date range
     @Query("SELECT pt.status AS status, COUNT(pt) AS cnt FROM PaymentTransaction pt " +
-           "WHERE pt.booking.createdAt >= :start AND pt.booking.createdAt <= :end " +
+           "WHERE pt.createdAt >= :start AND pt.createdAt <= :end " +
            "GROUP BY pt.status")
     List<Object[]> countByStatusBetween(@Param("start") java.time.Instant start, @Param("end") java.time.Instant end);
 
     // Dashboard: recent payments
     @Query("SELECT pt FROM PaymentTransaction pt JOIN FETCH pt.booking " +
-           "WHERE pt.booking.createdAt >= :start AND pt.booking.createdAt <= :end " +
-           "ORDER BY pt.id DESC")
+           "WHERE pt.createdAt >= :start AND pt.createdAt <= :end " +
+           "ORDER BY pt.createdAt DESC")
     List<PaymentTransaction> findRecentPayments(@Param("start") java.time.Instant start, @Param("end") java.time.Instant end);
 }
