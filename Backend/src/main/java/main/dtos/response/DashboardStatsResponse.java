@@ -26,6 +26,7 @@ public class DashboardStatsResponse {
     private List<MonthlyCount> userRegistrationsByMonth;
     private List<RecentBooking> recentBookings;
     private List<RecentPayment> recentPayments;
+    private DiscountCampaignMetrics discountCampaignMetrics;
 
     @Getter
     @Setter
@@ -125,5 +126,61 @@ public class DashboardStatsResponse {
         private String status;
         private String createdAt;
         private String detailHref;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CampaignTrendPoint {
+        private String periodLabel;
+        private long issuedCoupons;
+        private long redeemedCoupons;
+        private long discountAttributedBookings;
+        private BigDecimal discountValueGranted;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CampaignPerformanceEntry {
+        private String campaignId;
+        private String campaignName;
+        private String status;
+        private String validFrom;
+        private String validUntil;
+        private long issuedCoupons;
+        private long redeemedCoupons;
+        private long discountAttributedBookings;
+        private BigDecimal discountValueGranted;
+        private BigDecimal redemptionRate;
+        private String detailHref;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CampaignMetricsEmptyState {
+        private String title;
+        private String description;
+        private String suggestedAction;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DiscountCampaignMetrics {
+        private List<SummaryCard> summaryCards;
+        private List<CampaignTrendPoint> redemptionTrend;
+        private List<StatusCount> campaignStatusDistribution;
+        private List<CampaignPerformanceEntry> topCampaigns;
+        private CampaignMetricsEmptyState emptyState;
     }
 }

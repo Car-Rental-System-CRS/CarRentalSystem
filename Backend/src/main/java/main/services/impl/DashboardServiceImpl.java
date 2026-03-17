@@ -2,13 +2,22 @@ package main.services.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.text.NumberFormat;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -16,7 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import main.dtos.response.DashboardStatsResponse;
+import main.dtos.response.DashboardStatsResponse.CampaignMetricsEmptyState;
+import main.dtos.response.DashboardStatsResponse.CampaignPerformanceEntry;
+import main.dtos.response.DashboardStatsResponse.CampaignTrendPoint;
 import main.dtos.response.DashboardStatsResponse.CarTypeCount;
+import main.dtos.response.DashboardStatsResponse.DiscountCampaignMetrics;
 import main.dtos.response.DashboardStatsResponse.MonthlyCount;
 import main.dtos.response.DashboardStatsResponse.MonthlyRevenue;
 import main.dtos.response.DashboardStatsResponse.RecentBooking;
@@ -26,10 +39,18 @@ import main.dtos.response.DashboardStatsResponse.StatusCount;
 import main.dtos.response.DashboardStatsResponse.SummaryCard;
 import main.entities.Booking;
 import main.entities.BookingCar;
+import main.entities.Coupon;
+import main.entities.CouponRedemption;
+import main.entities.DiscountCampaign;
 import main.entities.PaymentTransaction;
+import main.enums.CouponRedemptionStatus;
+import main.enums.DiscountCampaignStatus;
 import main.repositories.AccountRepository;
 import main.repositories.BookingCarRepository;
 import main.repositories.BookingRepository;
+import main.repositories.CouponRedemptionRepository;
+import main.repositories.CouponRepository;
+import main.repositories.DiscountCampaignRepository;
 import main.repositories.PaymentTransactionRepository;
 import main.services.DashboardService;
 
@@ -41,11 +62,18 @@ public class DashboardServiceImpl implements DashboardService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_INSTANT;
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(Locale.US);
     private static final NumberFormat NUMBER_FORMATTER = NumberFormat.getNumberInstance(Locale.US);
+    private static final Set<CouponRedemptionStatus> SUCCESSFUL_REDEMPTION_STATUSES = EnumSet.of(
+            CouponRedemptionStatus.APPLIED,
+            CouponRedemptionStatus.CONSUMED
+    );
 
     private final BookingRepository bookingRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final BookingCarRepository bookingCarRepository;
     private final AccountRepository accountRepository;
+    private final DiscountCampaignRepository discountCampaignRepository;
+    private final CouponRepository couponRepository;
+    private final CouponRedemptionRepository couponRedemptionRepository;
 
     @Override
     public DashboardStatsResponse getDashboardStats(Instant startDate, Instant endDate) {
@@ -74,6 +102,8 @@ public class DashboardServiceImpl implements DashboardService {
                 getUserRegistrationsByMonth(previousStart, previousEnd)
         );
 
+        DiscountCampaignMetrics campaignMetrics = buildDiscountCampaignMetrics(startDate, endDate, previousStart, previousEnd);
+
         return DashboardStatsResponse.builder()
                 .reportingPeriod(buildReportingPeriod(startDate, endDate, previousStart, previousEnd))
                 .summaryCards(buildSummaryCards(currentSnapshot, previousSnapshot))
@@ -85,6 +115,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .userRegistrationsByMonth(userRegistrationsByMonth)
                 .recentBookings(recentBookings)
                 .recentPayments(recentPayments)
+                .discountCampaignMetrics(campaignMetrics)
                 .build();
     }
 
@@ -250,6 +281,33 @@ public class DashboardServiceImpl implements DashboardService {
         return "NORMAL";
     }
 
+    private String determineCampaignValueAttentionState(BigDecimal currentValue, BigDecimal previousValue) {
+        if (currentValue.compareTo(BigDecimal.ZERO) == 0 && previousValue.compareTo(BigDecimal.ZERO) > 0) {
+            return "WATCH";
+        }
+        if (currentValue.compareTo(previousValue) > 0) {
+            return "NORMAL";
+        }
+        if (currentValue.compareTo(previousValue) < 0) {
+            return "WATCH";
+        }
+        return "NORMAL";
+    }
+
+    private String determineRedemptionAttentionState(CampaignSnapshot snapshot) {
+        if (snapshot.issuedCoupons() > 0 && snapshot.redeemedCoupons() == 0) {
+            return "CRITICAL";
+        }
+        if (snapshot.issuedCoupons() > 0) {
+            BigDecimal rate = BigDecimal.valueOf(snapshot.redeemedCoupons())
+                    .divide(BigDecimal.valueOf(snapshot.issuedCoupons()), 4, RoundingMode.HALF_UP);
+            if (rate.compareTo(BigDecimal.valueOf(0.1)) < 0) {
+                return "WATCH";
+            }
+        }
+        return "NORMAL";
+    }
+
     private String formatCurrency(BigDecimal value) {
         synchronized (CURRENCY_FORMATTER) {
             return CURRENCY_FORMATTER.format(value);
@@ -291,6 +349,279 @@ public class DashboardServiceImpl implements DashboardService {
                 .filter(item -> status.equals(item.getStatus()))
                 .mapToLong(StatusCount::getCount)
                 .sum();
+    }
+
+    private DiscountCampaignMetrics buildDiscountCampaignMetrics(
+            Instant startDate,
+            Instant endDate,
+            Instant previousStart,
+            Instant previousEnd
+    ) {
+        CampaignMetricsData currentMetrics = loadCampaignMetricsData(startDate, endDate);
+        CampaignMetricsData previousMetrics = loadCampaignMetricsData(previousStart, previousEnd);
+
+        CampaignSnapshot currentSnapshot = buildCampaignSnapshot(currentMetrics);
+        CampaignSnapshot previousSnapshot = buildCampaignSnapshot(previousMetrics);
+
+        return DiscountCampaignMetrics.builder()
+                .summaryCards(buildCampaignSummaryCards(currentSnapshot, previousSnapshot))
+                .redemptionTrend(buildCampaignTrend(currentMetrics, startDate, endDate))
+                .campaignStatusDistribution(buildCampaignStatusDistribution(currentMetrics.campaigns()))
+                .topCampaigns(buildCampaignPerformanceEntries(currentMetrics))
+                .emptyState(buildCampaignEmptyState(currentSnapshot))
+                .build();
+    }
+
+    private CampaignMetricsData loadCampaignMetricsData(Instant startDate, Instant endDate) {
+        LocalDateTime periodStart = LocalDateTime.ofInstant(startDate, ZoneOffset.UTC);
+        LocalDateTime periodEnd = LocalDateTime.ofInstant(endDate, ZoneOffset.UTC);
+
+        List<DiscountCampaign> campaigns = discountCampaignRepository.findRelevantCampaignsForPeriod(
+                periodStart,
+                periodEnd,
+                startDate,
+                endDate
+        );
+        List<Coupon> issuedCoupons = couponRepository.findWithCampaignByCreatedAtBetween(startDate, endDate);
+        List<CouponRedemption> redemptions = couponRedemptionRepository.findWithCampaignAndBookingByCreatedAtBetween(startDate, endDate)
+                .stream()
+                .filter(redemption -> SUCCESSFUL_REDEMPTION_STATUSES.contains(redemption.getStatus()))
+                .collect(Collectors.toList());
+
+        return new CampaignMetricsData(campaigns, issuedCoupons, redemptions);
+    }
+
+    private CampaignSnapshot buildCampaignSnapshot(CampaignMetricsData metricsData) {
+        long activeCampaigns = metricsData.campaigns().stream()
+                .filter(campaign -> campaign.getStatus() == DiscountCampaignStatus.ACTIVE)
+                .count();
+
+        long issuedCoupons = metricsData.issuedCoupons().size();
+        long redeemedCoupons = metricsData.redemptions().size();
+
+        Set<UUID> bookingIds = metricsData.redemptions().stream()
+                .map(CouponRedemption::getBooking)
+                .filter(booking -> booking != null && booking.getId() != null)
+                .map(Booking::getId)
+                .collect(Collectors.toSet());
+
+        BigDecimal discountValueGranted = metricsData.redemptions().stream()
+                .map(CouponRedemption::getDiscountAmount)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new CampaignSnapshot(
+                activeCampaigns,
+                issuedCoupons,
+                redeemedCoupons,
+                bookingIds.size(),
+                discountValueGranted
+        );
+    }
+
+    private List<SummaryCard> buildCampaignSummaryCards(CampaignSnapshot current, CampaignSnapshot previous) {
+        return List.of(
+                buildSummaryCard(
+                        "activeCampaigns",
+                        "Active campaigns",
+                        BigDecimal.valueOf(current.activeCampaigns()),
+                        BigDecimal.valueOf(previous.activeCampaigns()),
+                        determineCountAttentionState(current.activeCampaigns(), previous.activeCampaigns()),
+                        false
+                ),
+                buildSummaryCard(
+                        "issuedCoupons",
+                        "Coupons issued",
+                        BigDecimal.valueOf(current.issuedCoupons()),
+                        BigDecimal.valueOf(previous.issuedCoupons()),
+                        determineCountAttentionState(current.issuedCoupons(), previous.issuedCoupons()),
+                        false
+                ),
+                buildSummaryCard(
+                        "redeemedCoupons",
+                        "Coupons redeemed",
+                        BigDecimal.valueOf(current.redeemedCoupons()),
+                        BigDecimal.valueOf(previous.redeemedCoupons()),
+                        determineRedemptionAttentionState(current),
+                        false
+                ),
+                buildSummaryCard(
+                        "discountAttributedBookings",
+                        "Discount bookings",
+                        BigDecimal.valueOf(current.discountAttributedBookings()),
+                        BigDecimal.valueOf(previous.discountAttributedBookings()),
+                        determineCountAttentionState(
+                                current.discountAttributedBookings(),
+                                previous.discountAttributedBookings()
+                        ),
+                        false
+                ),
+                buildSummaryCard(
+                        "discountValueGranted",
+                        "Discount value granted",
+                        current.discountValueGranted(),
+                        previous.discountValueGranted(),
+                        determineCampaignValueAttentionState(
+                                current.discountValueGranted(),
+                                previous.discountValueGranted()
+                        ),
+                        true
+                )
+        );
+    }
+
+    private CampaignMetricsEmptyState buildCampaignEmptyState(CampaignSnapshot snapshot) {
+        boolean hasNoActivity = snapshot.activeCampaigns() == 0
+                && snapshot.issuedCoupons() == 0
+                && snapshot.redeemedCoupons() == 0
+                && snapshot.discountAttributedBookings() == 0
+                && snapshot.discountValueGranted().compareTo(BigDecimal.ZERO) == 0;
+
+        if (!hasNoActivity) {
+            return null;
+        }
+
+        return CampaignMetricsEmptyState.builder()
+                .title("No campaign activity yet")
+                .description("There were no discount campaigns, coupon issuances, or coupon redemptions in the selected reporting period.")
+                .suggestedAction("Expand the reporting period or activate a campaign to populate this tab.")
+                .build();
+    }
+
+    private List<CampaignTrendPoint> buildCampaignTrend(
+            CampaignMetricsData metricsData,
+            Instant startDate,
+            Instant endDate
+    ) {
+        long days = ChronoUnit.DAYS.between(
+                startDate.atZone(ZoneOffset.UTC).toLocalDate(),
+                endDate.atZone(ZoneOffset.UTC).toLocalDate()
+        ) + 1;
+        boolean useDailyBuckets = days <= 31;
+
+        Map<String, CampaignTrendAccumulator> buckets = initialiseTrendBuckets(startDate, endDate, useDailyBuckets);
+
+        for (Coupon coupon : metricsData.issuedCoupons()) {
+            String bucketKey = getTrendBucketKey(coupon.getCreatedAt(), useDailyBuckets);
+            CampaignTrendAccumulator bucket = buckets.get(bucketKey);
+            if (bucket != null) {
+                bucket.incrementIssuedCoupons();
+            }
+        }
+
+        for (CouponRedemption redemption : metricsData.redemptions()) {
+            String bucketKey = getTrendBucketKey(getRedemptionEventInstant(redemption), useDailyBuckets);
+            CampaignTrendAccumulator bucket = buckets.get(bucketKey);
+            if (bucket != null) {
+                bucket.incrementRedeemedCoupons();
+                if (redemption.getBooking() != null && redemption.getBooking().getId() != null) {
+                    bucket.addBooking(redemption.getBooking().getId());
+                }
+                if (redemption.getDiscountAmount() != null) {
+                    bucket.addDiscountValue(redemption.getDiscountAmount());
+                }
+            }
+        }
+
+        return buckets.entrySet().stream()
+                .map(entry -> entry.getValue().toDto(entry.getKey()))
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, CampaignTrendAccumulator> initialiseTrendBuckets(
+            Instant startDate,
+            Instant endDate,
+            boolean useDailyBuckets
+    ) {
+        Map<String, CampaignTrendAccumulator> buckets = new LinkedHashMap<>();
+        LocalDate start = startDate.atZone(ZoneOffset.UTC).toLocalDate();
+        LocalDate end = endDate.atZone(ZoneOffset.UTC).toLocalDate();
+
+        if (useDailyBuckets) {
+            LocalDate cursor = start;
+            while (!cursor.isAfter(end)) {
+                buckets.put(cursor.toString(), new CampaignTrendAccumulator());
+                cursor = cursor.plusDays(1);
+            }
+            return buckets;
+        }
+
+        YearMonth startMonth = YearMonth.from(start);
+        YearMonth endMonth = YearMonth.from(end);
+        YearMonth cursor = startMonth;
+        while (!cursor.isAfter(endMonth)) {
+            buckets.put(cursor.toString(), new CampaignTrendAccumulator());
+            cursor = cursor.plusMonths(1);
+        }
+        return buckets;
+    }
+
+    private String getTrendBucketKey(Instant instant, boolean useDailyBuckets) {
+        LocalDate utcDate = instant.atZone(ZoneOffset.UTC).toLocalDate();
+        return useDailyBuckets ? utcDate.toString() : YearMonth.from(utcDate).toString();
+    }
+
+    private Instant getRedemptionEventInstant(CouponRedemption redemption) {
+        if (redemption.getConsumedAt() != null) {
+            return redemption.getConsumedAt().toInstant(ZoneOffset.UTC);
+        }
+        if (redemption.getValidatedAt() != null) {
+            return redemption.getValidatedAt().toInstant(ZoneOffset.UTC);
+        }
+        return redemption.getCreatedAt();
+    }
+
+    private List<StatusCount> buildCampaignStatusDistribution(List<DiscountCampaign> campaigns) {
+        Map<String, Long> counts = campaigns.stream()
+                .collect(Collectors.groupingBy(
+                        campaign -> campaign.getStatus().name(),
+                        LinkedHashMap::new,
+                        Collectors.counting()
+                ));
+
+        return counts.entrySet().stream()
+                .map(entry -> StatusCount.builder()
+                        .status(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    private List<CampaignPerformanceEntry> buildCampaignPerformanceEntries(CampaignMetricsData metricsData) {
+        Map<UUID, CampaignPerformanceAccumulator> byCampaign = new LinkedHashMap<>();
+
+        for (DiscountCampaign campaign : metricsData.campaigns()) {
+            byCampaign.put(campaign.getId(), new CampaignPerformanceAccumulator(campaign));
+        }
+
+        for (Coupon coupon : metricsData.issuedCoupons()) {
+            byCampaign.computeIfAbsent(
+                    coupon.getCampaign().getId(),
+                    unused -> new CampaignPerformanceAccumulator(coupon.getCampaign())
+            ).incrementIssuedCoupons();
+        }
+
+        for (CouponRedemption redemption : metricsData.redemptions()) {
+            byCampaign.computeIfAbsent(
+                    redemption.getCampaign().getId(),
+                    unused -> new CampaignPerformanceAccumulator(redemption.getCampaign())
+            ).addRedemption(redemption);
+        }
+
+        return byCampaign.values().stream()
+                .map(CampaignPerformanceAccumulator::toDto)
+                .sorted((left, right) -> {
+                    int valueComparison = right.getDiscountValueGranted().compareTo(left.getDiscountValueGranted());
+                    if (valueComparison != 0) {
+                        return valueComparison;
+                    }
+                    int redeemedComparison = Long.compare(right.getRedeemedCoupons(), left.getRedeemedCoupons());
+                    if (redeemedComparison != 0) {
+                        return redeemedComparison;
+                    }
+                    return Long.compare(right.getIssuedCoupons(), left.getIssuedCoupons());
+                })
+                .collect(Collectors.toList());
     }
 
     private List<MonthlyRevenue> getRevenueByMonth(Instant start, Instant end) {
@@ -358,24 +689,23 @@ public class DashboardServiceImpl implements DashboardService {
         List<Booking> bookings = bookingRepository.findRecentBookings(start, end);
         return bookings.stream()
                 .limit(5)
-                .map(b -> {
-                    // Get first car type name from booking cars
+                .map(booking -> {
                     String carTypeName = "";
-                    if (b.getBookingCars() != null && !b.getBookingCars().isEmpty()) {
-                        BookingCar first = b.getBookingCars().get(0);
+                    if (booking.getBookingCars() != null && !booking.getBookingCars().isEmpty()) {
+                        BookingCar first = booking.getBookingCars().get(0);
                         if (first.getCar() != null && first.getCar().getCarType() != null) {
                             carTypeName = first.getCar().getCarType().getName();
                         }
                     }
                     return RecentBooking.builder()
-                            .id(b.getId().toString())
-                            .customerName(b.getAccount().getName())
+                            .id(booking.getId().toString())
+                            .customerName(booking.getAccount().getName())
                             .carTypeName(carTypeName)
-                            .expectedReceiveDate(b.getExpectedReceiveDate() != null ? b.getExpectedReceiveDate().toString() : null)
-                            .expectedReturnDate(b.getExpectedReturnDate() != null ? b.getExpectedReturnDate().toString() : null)
-                            .totalPrice(b.getTotalPrice())
-                            .status(b.getStatus().name())
-                            .detailHref("/bookings/" + b.getId())
+                            .expectedReceiveDate(booking.getExpectedReceiveDate() != null ? booking.getExpectedReceiveDate().toString() : null)
+                            .expectedReturnDate(booking.getExpectedReturnDate() != null ? booking.getExpectedReturnDate().toString() : null)
+                            .totalPrice(booking.getTotalPrice())
+                            .status(booking.getStatus().name())
+                            .detailHref("/bookings/" + booking.getId())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -385,14 +715,14 @@ public class DashboardServiceImpl implements DashboardService {
         List<PaymentTransaction> payments = paymentTransactionRepository.findRecentPayments(start, end);
         return payments.stream()
                 .limit(5)
-                .map(pt -> RecentPayment.builder()
-                        .id(pt.getId().toString())
-                        .bookingId(pt.getBooking().getId().toString())
-                        .amount(pt.getAmount())
-                        .purpose(pt.getPurpose().name())
-                        .status(pt.getStatus().name())
-                        .createdAt(pt.getCreatedAt() != null ? pt.getCreatedAt().toString() : null)
-                        .detailHref("/bookings/" + pt.getBooking().getId())
+                .map(payment -> RecentPayment.builder()
+                        .id(payment.getId().toString())
+                        .bookingId(payment.getBooking().getId().toString())
+                        .amount(payment.getAmount())
+                        .purpose(payment.getPurpose().name())
+                        .status(payment.getStatus().name())
+                        .createdAt(payment.getCreatedAt() != null ? payment.getCreatedAt().toString() : null)
+                        .detailHref("/bookings/" + payment.getBooking().getId())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -404,5 +734,104 @@ public class DashboardServiceImpl implements DashboardService {
             long pendingPayments,
             long registrations
     ) {
+    }
+
+    private record CampaignSnapshot(
+            long activeCampaigns,
+            long issuedCoupons,
+            long redeemedCoupons,
+            long discountAttributedBookings,
+            BigDecimal discountValueGranted
+    ) {
+    }
+
+    private record CampaignMetricsData(
+            List<DiscountCampaign> campaigns,
+            List<Coupon> issuedCoupons,
+            List<CouponRedemption> redemptions
+    ) {
+    }
+
+    private static final class CampaignTrendAccumulator {
+        private long issuedCoupons;
+        private long redeemedCoupons;
+        private final Set<UUID> bookingIds = new java.util.HashSet<>();
+        private BigDecimal discountValueGranted = BigDecimal.ZERO;
+
+        private void incrementIssuedCoupons() {
+            issuedCoupons += 1;
+        }
+
+        private void incrementRedeemedCoupons() {
+            redeemedCoupons += 1;
+        }
+
+        private void addBooking(UUID bookingId) {
+            bookingIds.add(bookingId);
+        }
+
+        private void addDiscountValue(BigDecimal value) {
+            discountValueGranted = discountValueGranted.add(value);
+        }
+
+        private CampaignTrendPoint toDto(String periodLabel) {
+            return CampaignTrendPoint.builder()
+                    .periodLabel(periodLabel)
+                    .issuedCoupons(issuedCoupons)
+                    .redeemedCoupons(redeemedCoupons)
+                    .discountAttributedBookings(bookingIds.size())
+                    .discountValueGranted(discountValueGranted)
+                    .build();
+        }
+    }
+
+    private static final class CampaignPerformanceAccumulator {
+        private final DiscountCampaign campaign;
+        private long issuedCoupons;
+        private long redeemedCoupons;
+        private final Set<UUID> bookingIds = new java.util.HashSet<>();
+        private BigDecimal discountValueGranted = BigDecimal.ZERO;
+
+        private CampaignPerformanceAccumulator(DiscountCampaign campaign) {
+            this.campaign = campaign;
+        }
+
+        private void incrementIssuedCoupons() {
+            issuedCoupons += 1;
+        }
+
+        private void addRedemption(CouponRedemption redemption) {
+            redeemedCoupons += 1;
+            if (redemption.getBooking() != null && redemption.getBooking().getId() != null) {
+                bookingIds.add(redemption.getBooking().getId());
+            }
+            if (redemption.getDiscountAmount() != null) {
+                discountValueGranted = discountValueGranted.add(redemption.getDiscountAmount());
+            }
+        }
+
+        private CampaignPerformanceEntry toDto() {
+            BigDecimal redemptionRate = null;
+            if (issuedCoupons > 0) {
+                redemptionRate = BigDecimal.valueOf(redeemedCoupons)
+                        .divide(BigDecimal.valueOf(issuedCoupons), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100))
+                        .setScale(1, RoundingMode.HALF_UP);
+            }
+
+            return CampaignPerformanceEntry.builder()
+                    .campaignId(campaign.getId().toString())
+                    .campaignName(campaign.getName())
+                    .status(campaign.getStatus().name())
+                    .validFrom(campaign.getValidFrom() != null ? campaign.getValidFrom().toString() : null)
+                    .validUntil(campaign.getValidUntil() != null ? campaign.getValidUntil().toString() : null)
+                    .issuedCoupons(issuedCoupons)
+                    .redeemedCoupons(redeemedCoupons)
+                    .discountAttributedBookings(bookingIds.size())
+                    .discountValueGranted(discountValueGranted)
+                    .redemptionRate(redemptionRate)
+                    .detailHref("/admin/discount-campaigns?campaignId=" + campaign.getId())
+                    .build();
+        }
     }
 }

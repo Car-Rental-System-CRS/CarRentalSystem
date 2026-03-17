@@ -32,6 +32,9 @@ import main.enums.PaymentStatus;
 import main.repositories.AccountRepository;
 import main.repositories.BookingCarRepository;
 import main.repositories.BookingRepository;
+import main.repositories.CouponRedemptionRepository;
+import main.repositories.CouponRepository;
+import main.repositories.DiscountCampaignRepository;
 import main.repositories.PaymentTransactionRepository;
 import main.services.impl.DashboardServiceImpl;
 
@@ -49,6 +52,15 @@ class DashboardServiceImplTest {
 
     @Mock
     private AccountRepository accountRepository;
+
+    @Mock
+    private DiscountCampaignRepository discountCampaignRepository;
+
+    @Mock
+    private CouponRepository couponRepository;
+
+    @Mock
+    private CouponRedemptionRepository couponRedemptionRepository;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -81,6 +93,12 @@ class DashboardServiceImplTest {
                 .thenReturn(List.of(buildBooking(bookingId, "Jane Doe", "SUV", BookingStatus.CONFIRMED)));
         when(paymentTransactionRepository.findRecentPayments(any(), any()))
                 .thenReturn(List.of(buildPayment(paymentId, bookingId)));
+        when(discountCampaignRepository.findRelevantCampaignsForPeriod(any(), any(), any(), any()))
+                .thenReturn(List.of());
+        when(couponRepository.findWithCampaignByCreatedAtBetween(any(), any()))
+                .thenReturn(List.of());
+        when(couponRedemptionRepository.findWithCampaignAndBookingByCreatedAtBetween(any(), any()))
+                .thenReturn(List.of());
 
         DashboardStatsResponse response = dashboardService.getDashboardStats(
                 Instant.parse("2026-03-01T00:00:00Z"),
@@ -96,6 +114,9 @@ class DashboardServiceImplTest {
         assertEquals("/bookings/" + bookingId, response.getRecentPayments().get(0).getDetailHref());
         assertEquals(paymentId.toString(), response.getRecentPayments().get(0).getId());
         assertEquals("2026-03-20T08:00:00Z", response.getRecentPayments().get(0).getCreatedAt());
+        assertNotNull(response.getDiscountCampaignMetrics());
+        assertTrue(response.getDiscountCampaignMetrics().getSummaryCards().stream()
+                .allMatch(card -> card.getValue().compareTo(BigDecimal.ZERO) == 0));
     }
 
     @Test
@@ -118,6 +139,12 @@ class DashboardServiceImplTest {
                 .thenReturn(List.<Object[]>of(new Object[]{"2026-02", 1L}));
         when(bookingRepository.findRecentBookings(any(), any())).thenReturn(List.of());
         when(paymentTransactionRepository.findRecentPayments(any(), any())).thenReturn(List.of());
+        when(discountCampaignRepository.findRelevantCampaignsForPeriod(any(), any(), any(), any()))
+                .thenReturn(List.of());
+        when(couponRepository.findWithCampaignByCreatedAtBetween(any(), any()))
+                .thenReturn(List.of());
+        when(couponRedemptionRepository.findWithCampaignAndBookingByCreatedAtBetween(any(), any()))
+                .thenReturn(List.of());
 
         DashboardStatsResponse response = dashboardService.getDashboardStats(
                 Instant.parse("2026-03-01T00:00:00Z"),
@@ -129,6 +156,7 @@ class DashboardServiceImplTest {
         assertTrue(response.getRecentBookings().isEmpty());
         assertTrue(response.getRecentPayments().isEmpty());
         assertNotNull(response.getReportingPeriod().getComparisonLabel());
+        assertNotNull(response.getDiscountCampaignMetrics().getEmptyState());
     }
 
     private Booking buildBooking(UUID bookingId, String customerName, String carTypeName, BookingStatus status) {

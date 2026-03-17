@@ -135,6 +135,11 @@ export function getSummaryIconName(card: DashboardSummaryCard): string {
     bookings: 'CalendarRange',
     paidPayments: 'Wallet',
     customers: 'Users',
+    activeCampaigns: 'Users',
+    issuedCoupons: 'Wallet',
+    redeemedCoupons: 'BarChart3',
+    discountAttributedBookings: 'CalendarRange',
+    discountValueGranted: 'DollarSign',
   };
 
   return iconMap[card.key] || 'BarChart3';

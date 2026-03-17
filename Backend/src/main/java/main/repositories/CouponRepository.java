@@ -24,4 +24,8 @@ public interface CouponRepository extends JpaRepository<Coupon, UUID> {
 
     @Query("SELECT c FROM Coupon c WHERE c.status = :status AND c.expiresAt < :cutoff")
     List<Coupon> findExpiredCoupons(@Param("status") CouponStatus status, @Param("cutoff") LocalDateTime cutoff);
+
+    @Query("SELECT c FROM Coupon c JOIN FETCH c.campaign " +
+           "WHERE c.createdAt >= :start AND c.createdAt <= :end")
+    List<Coupon> findWithCampaignByCreatedAtBetween(@Param("start") java.time.Instant start, @Param("end") java.time.Instant end);
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import ScopeGuard from '@/components/ScopeGuard';
 import { discountCampaignService } from '@/services/discountCampaignService';
@@ -31,6 +32,7 @@ const EMPTY_FORM: CreateDiscountCampaignRequest = {
 const toDateTimeLocal = (value: string) => value ? value.slice(0, 16) : '';
 
 export default function DiscountCampaignsPage() {
+  const searchParams = useSearchParams();
   const [campaigns, setCampaigns] = useState<DiscountCampaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [editingCampaign, setEditingCampaign] = useState<DiscountCampaign | null>(null);
@@ -43,16 +45,29 @@ export default function DiscountCampaignsPage() {
     [campaigns, selectedCampaignId]
   );
 
-  const loadCampaigns = async () => {
+  const loadCampaigns = useCallback(async () => {
     const data = await discountCampaignService.getAll({ page: 0, size: 50 });
     setCampaigns(data.items);
-  };
+  }, []);
 
   useEffect(() => {
     loadCampaigns().catch(() => {
       toast.error('Failed to load discount campaigns');
     });
-  }, []);
+  }, [loadCampaigns]);
+
+  useEffect(() => {
+    const requestedCampaignId = searchParams.get('campaignId');
+    if (!requestedCampaignId || campaigns.length === 0) {
+      return;
+    }
+
+    const matchingCampaign = campaigns.find((campaign) => campaign.id === requestedCampaignId);
+    if (matchingCampaign) {
+      setSelectedCampaignId(matchingCampaign.id);
+      setCoupons([]);
+    }
+  }, [campaigns, searchParams]);
 
   const handleSubmit = async () => {
     setSubmitting(true);

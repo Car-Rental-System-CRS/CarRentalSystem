@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js,.jsx,.ts,.tsx",
     "check-types": "tsc --noEmit --pretty",
     "format": "next lint --fix && prettier '**/*.{json,yaml}' --write --ignore-path .gitignore"
   },

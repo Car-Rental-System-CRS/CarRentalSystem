@@ -15,6 +15,7 @@ export interface DashboardStatsParams {
 
 export const dashboardService = {
   getStats: async (params?: DashboardStatsParams): Promise<DashboardStats> => {
+    // The shared dashboard payload now includes the discount campaign metrics tab data.
     const response = await axios.get<APIResponse<DashboardStats>>(
       '/api/admin/dashboard',
       {
