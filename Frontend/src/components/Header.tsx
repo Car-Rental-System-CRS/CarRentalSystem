@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { signOut } from 'next-auth/react';
 import { BookingCart } from '@/components/BookingCart';
+import DiscountNotificationBell from '@/components/DiscountNotificationBell';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -80,6 +81,7 @@ export default function Header() {
 
             {/* Booking Cart */}
             <BookingCart />
+            <DiscountNotificationBell />
 
             {/* Divider */}
             <div className="h-8 w-px bg-gray-300"></div>

@@ -15,21 +15,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateBookingRequest {
-    // Car Type ID (the vehicle model)
+public class BookingCouponValidationRequest {
     private UUID carTypeId;
-    
-    // Number of cars to book
-    private int quantity;
-
-    // Optional explicit selection from renter flow.
-    // If provided, quantity is derived from this list.
+    private Integer quantity;
     private List<UUID> selectedCarIds;
-
     private LocalDateTime expectedReceiveDate;
     private LocalDateTime expectedReturnDate;
     private String couponCode;
-    
-    // If true, return payment URL for immediate payment. If false, pay later option.
-    private boolean payNow;
 }

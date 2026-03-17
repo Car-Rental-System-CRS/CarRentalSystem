@@ -14,7 +14,7 @@ import { Calendar, User, ArrowLeft, CreditCard, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { createBooking } from '@/services/bookingService';
+import { createBooking, validateBookingCoupon, BookingCouponValidationResponse } from '@/services/bookingService';
 import { getErrorMessage, handleError } from '@/lib/errorHandler';
 
 // Deposit percentage (should match backend)
@@ -28,6 +28,9 @@ export default function CheckoutClient() {
   const { data: session } = useSession();
   const { cartItems, removeFromCart } = useBooking();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponPreview, setCouponPreview] = useState<BookingCouponValidationResponse | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   // Find the specific cart item to checkout
   const cartItem = useMemo(() => {
@@ -76,6 +79,7 @@ export default function CheckoutClient() {
         selectedCarIds: cartItem.selectedCarIds,
         expectedReceiveDate: cartItem.pickupDateTime.toISOString(),
         expectedReturnDate: cartItem.returnDateTime.toISOString(),
+        couponCode: couponPreview?.valid ? couponCode : undefined,
         payNow,
       });
 
@@ -119,6 +123,40 @@ export default function CheckoutClient() {
       setIsProcessing(false);
     }
   };
+
+  const handleValidateCoupon = async () => {
+    if (!cartItem || !couponCode.trim()) {
+      setCouponPreview(null);
+      return;
+    }
+
+    setValidatingCoupon(true);
+    try {
+      const preview = await validateBookingCoupon({
+        carTypeId: cartItem.carTypeId,
+        quantity: cartItem.selectedCarIds?.length || cartItem.quantity,
+        selectedCarIds: cartItem.selectedCarIds,
+        expectedReceiveDate: cartItem.pickupDateTime.toISOString(),
+        expectedReturnDate: cartItem.returnDateTime.toISOString(),
+        couponCode: couponCode.trim(),
+      });
+      setCouponPreview(preview);
+      if (preview.valid) {
+        toast.success('Coupon applied', { description: preview.message });
+      } else {
+        toast.error('Coupon rejected', { description: preview.message });
+      }
+    } catch (error) {
+      setCouponPreview(null);
+      handleError(error, 'Failed to validate coupon');
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const payableTotal = couponPreview?.valid ? couponPreview.discountedTotal : cartItem.totalPrice;
+  const depositAmount = payableTotal * DEPOSIT_PERCENTAGE;
+  const remainingAmount = payableTotal - depositAmount;
 
   // No cart item ID provided
   if (!cartItemId) {
@@ -226,6 +264,39 @@ export default function CheckoutClient() {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="rounded-lg border border-dashed border-blue-200 bg-blue-50/50 p-4 space-y-3">
+                <div>
+                  <Label htmlFor="couponCode">Coupon Code</Label>
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      id="couponCode"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Enter your coupon code"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleValidateCoupon}
+                      disabled={validatingCoupon || !couponCode.trim()}
+                    >
+                      {validatingCoupon ? 'Checking...' : 'Apply'}
+                    </Button>
+                  </div>
+                </div>
+
+                {couponPreview && (
+                  <div className={`rounded-md px-3 py-2 text-sm ${couponPreview.valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {couponPreview.message}
+                    {couponPreview.valid && (
+                      <div className="mt-1 font-medium">
+                        Discount: ${couponPreview.discountAmount.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 <Button
                   size="lg"
@@ -236,7 +307,7 @@ export default function CheckoutClient() {
                   <CreditCard className="h-6 w-6" />
                   <span className="font-semibold">Pay Deposit Now</span>
                   <span className="text-sm opacity-80">
-                    ${(cartItem.totalPrice * DEPOSIT_PERCENTAGE).toFixed(2)} (30%)
+                    ${depositAmount.toFixed(2)} (30%)
                   </span>
                 </Button>
               </div>
@@ -244,15 +315,21 @@ export default function CheckoutClient() {
               <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
                 <div className="flex justify-between">
                   <span>Total booking price</span>
-                  <span className="font-medium">${cartItem.totalPrice.toFixed(2)}</span>
+                  <span className="font-medium">${payableTotal.toFixed(2)}</span>
                 </div>
+                {couponPreview?.valid && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Coupon discount</span>
+                    <span className="font-medium">-${couponPreview.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-primary">
                   <span>Deposit ({(DEPOSIT_PERCENTAGE * 100).toFixed(0)}%)</span>
-                  <span className="font-medium">${(cartItem.totalPrice * DEPOSIT_PERCENTAGE).toFixed(2)}</span>
+                  <span className="font-medium">${depositAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Remaining (due at pickup)</span>
-                  <span>${(cartItem.totalPrice * (1 - DEPOSIT_PERCENTAGE)).toFixed(2)}</span>
+                  <span>${remainingAmount.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -337,8 +414,14 @@ export default function CheckoutClient() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>${cartItem.totalPrice.toFixed(2)}</span>
+                    <span>${payableTotal.toFixed(2)}</span>
                   </div>
+                  {couponPreview?.valid && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Coupon savings</span>
+                      <span>-${couponPreview.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-primary font-medium">
                     <span>Deposit (30%)</span>
                     <span>${(cartItem.totalPrice * DEPOSIT_PERCENTAGE).toFixed(2)}</span>

@@ -56,6 +56,7 @@ export const ADMIN_SCOPES = [
     'ROLE_CREATE',
     'ROLE_EDIT',
     'ROLE_DELETE',
+    'DISCOUNT_CAMPAIGN_MANAGE',
 ] as const;
 
 export const SCOPE_LABELS: Record<string, string> = {
@@ -87,4 +88,5 @@ export const SCOPE_LABELS: Record<string, string> = {
     ROLE_CREATE: 'Create Roles',
     ROLE_EDIT: 'Edit Roles',
     ROLE_DELETE: 'Delete Roles',
+    DISCOUNT_CAMPAIGN_MANAGE: 'Manage Discount Campaigns',
 };

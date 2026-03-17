@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Shield, LayoutDashboard } from 'lucide-react';
+import { Users, Shield, LayoutDashboard, TicketPercent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/hooks/useAuth';
 
@@ -29,6 +29,12 @@ export default function AdminSidebar() {
       href: '/admin/roles',
       icon: Shield,
       scope: 'ROLE_VIEW',
+    },
+    {
+      name: 'Discount Campaigns',
+      href: '/admin/discount-campaigns',
+      icon: TicketPercent,
+      scope: 'DISCOUNT_CAMPAIGN_MANAGE',
     },
   ].filter((item) => hasScope(item.scope));
 

@@ -6,6 +6,7 @@ export interface BookingPayload {
   selectedCarIds?: string[];
   expectedReceiveDate: string;
   expectedReturnDate: string;
+  couponCode?: string;
   payNow: boolean;
 }
 
@@ -49,6 +50,15 @@ export interface BookingItem {
   totalDays: number;
   totalPrice: number;
   image?: string;
+}
+
+export interface CouponPricingPreview {
+  valid: boolean;
+  couponCode: string | null;
+  originalTotal: number;
+  discountAmount: number;
+  discountedTotal: number;
+  message: string;
 }
 
 export interface BookingStatus {

@@ -17,6 +17,7 @@ let sessionReadyResolve: (() => void) | null = null;
 let sessionReadyPromise = new Promise<void>((resolve) => {
   sessionReadyResolve = resolve;
 });
+let isHandlingUnauthorized = false;
 
 // Function to set token (called by SessionProvider after getting session)
 export const setAuthToken = (token: string | null) => {
@@ -83,10 +84,17 @@ instance.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       // Only redirect if session has finished loading (not during initial page load)
-      if (typeof window !== 'undefined' && sessionLoadState === 'ready') {
+      const hadAuthToken = Boolean(error.config?.headers?.Authorization || clientToken);
+
+      if (typeof window !== 'undefined' && sessionLoadState === 'ready' && hadAuthToken && !isHandlingUnauthorized) {
+        isHandlingUnauthorized = true;
         clientToken = null;
-        // Redirect to login
-        window.location.href = '/sign-in';
+        try {
+          const { signOut } = await import('next-auth/react');
+          await signOut({ redirect: false });
+        } finally {
+          window.location.href = '/sign-in';
+        }
       }
     }
     return Promise.reject(error);

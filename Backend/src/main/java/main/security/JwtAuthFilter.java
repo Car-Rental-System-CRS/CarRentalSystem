@@ -33,6 +33,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(prefix)) {
             jwt = header.substring(prefix.length());
         }
+        if (jwt == null) {
+            String accessToken = request.getParameter("access_token");
+            if (accessToken != null && !accessToken.isBlank()) {
+                jwt = accessToken;
+            }
+        }
 
         if (jwt != null && tokenBlacklistService.isRevoked(jwt) == false) {
             String accountId = null;

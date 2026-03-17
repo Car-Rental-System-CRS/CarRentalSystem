@@ -9,8 +9,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.multipart.MultipartFile;
 
 import main.dtos.request.CreateBookingRequest;
+import main.dtos.request.BookingCouponValidationRequest;
 import main.dtos.request.StaffPostTripInspectionRequest;
 import main.dtos.response.AdminBookingResponse;
+import main.dtos.response.BookingCouponValidationResponse;
 import main.dtos.response.BookingResponse;
 import main.dtos.response.MediaFileResponse;
 import main.dtos.response.PaymentTransactionResponse;
@@ -21,6 +23,8 @@ public interface BookingService {
 
     // Create booking (account will come from session/JWT later)
     BookingResponse createBooking(CreateBookingRequest request, UUID accountId) ;
+
+    BookingCouponValidationResponse validateCoupon(BookingCouponValidationRequest request, UUID accountId);
 
     // Get booking by id
     BookingResponse getBookingById(UUID bookingId);

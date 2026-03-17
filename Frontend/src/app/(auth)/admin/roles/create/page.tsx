@@ -39,6 +39,7 @@ const ADMIN_SCOPE_GROUPS: { label: string; scopes: string[] }[] = [
   { label: 'Dashboard', scopes: ['DASHBOARD_VIEW'] },
   { label: 'User Management', scopes: ['USER_VIEW', 'USER_EDIT', 'USER_ROLE_ASSIGN'] },
   { label: 'Role Management', scopes: ['ROLE_VIEW', 'ROLE_CREATE', 'ROLE_EDIT', 'ROLE_DELETE'] },
+  { label: 'Discount Campaigns', scopes: ['DISCOUNT_CAMPAIGN_MANAGE'] },
 ];
 
 export default function CreateRolePage() {
@@ -184,7 +185,7 @@ export default function CreateRolePage() {
                 </TabsContent>
                 <TabsContent value="ADMIN">
                   <p className="text-sm text-muted-foreground mt-2">
-                    Admin roles have access to user and role management permissions.
+                    Admin roles have access to dashboard, user, role, and discount campaign permissions.
                   </p>
                 </TabsContent>
               </Tabs>

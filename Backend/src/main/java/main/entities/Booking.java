@@ -48,9 +48,11 @@ public class Booking extends AuditableEntity {
 
     private BigDecimal totalPrice;
     private BigDecimal bookingPrice;
+    private BigDecimal discountAmount;
     private BigDecimal depositAmount;
     private BigDecimal remainingAmount;
     private BigDecimal overdueCharge;
+    private String appliedCouponCode;
 
     private LocalDateTime actualReceiveDate;
     private LocalDateTime actualReturnDate;

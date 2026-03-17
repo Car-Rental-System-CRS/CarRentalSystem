@@ -25,9 +25,12 @@ public class BookingResponse {
 
     private BigDecimal totalPrice;
     private BigDecimal bookingPrice;
+    private BigDecimal discountAmount;
     private BigDecimal depositAmount;
     private BigDecimal remainingAmount;
     private BigDecimal overdueCharge;
+    private String appliedCouponCode;
+    private String pricingMessage;
 
     private LocalDateTime expectedReceiveDate;
     private LocalDateTime expectedReturnDate;

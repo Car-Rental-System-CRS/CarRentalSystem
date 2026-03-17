@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import main.dtos.request.BookingCouponValidationRequest;
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateBookingRequest;
+import main.dtos.response.BookingCouponValidationResponse;
 import main.dtos.response.BookingResponse;
 import main.security.CustomUserDetails;
 import main.services.BookingService;
@@ -36,6 +38,14 @@ public class BookingController {
     ) {
         BookingResponse response = bookingService.createBooking(request, userDetails.getAccountId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/coupon-validation")
+    public ResponseEntity<BookingCouponValidationResponse> validateCoupon(
+            @RequestBody BookingCouponValidationRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(bookingService.validateCoupon(request, userDetails.getAccountId()));
     }
 
     /**

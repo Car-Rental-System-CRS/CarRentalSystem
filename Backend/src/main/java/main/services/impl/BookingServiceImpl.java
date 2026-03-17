@@ -23,9 +23,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 import main.dtos.request.CreateBookingRequest;
+import main.dtos.request.BookingCouponValidationRequest;
 import main.dtos.request.StaffPostTripInspectionItemRequest;
 import main.dtos.request.StaffPostTripInspectionRequest;
 import main.dtos.response.AdminBookingResponse;
+import main.dtos.response.BookingCouponValidationResponse;
 import main.dtos.response.BookingResponse;
 import main.dtos.response.CarResponse;
 import main.dtos.response.MediaFileResponse;
@@ -59,6 +61,7 @@ import main.repositories.MediaFileRepository;
 import main.repositories.PostTripInspectionRepository;
 import main.services.BookingService;
 import main.services.BookingNotificationService;
+import main.services.CouponRedemptionService;
 import main.services.MediaFileService;
 import main.services.PaymentTransactionService;
 
@@ -79,6 +82,7 @@ public class BookingServiceImpl implements BookingService {
     private final MediaFileService mediaFileService;
     private final BookingNotificationService bookingNotificationService;
     private final BookingNotificationMapper bookingNotificationMapper;
+    private final CouponRedemptionService couponRedemptionService;
 
 
     //===DEFINE BUSINESS RULES:====
@@ -146,13 +150,29 @@ public class BookingServiceImpl implements BookingService {
 
         // Calculate and update booking price
         BigDecimal bookingPrice = calculateBookingPrice(cars, pickup, returnDt);
-        BigDecimal depositAmount = bookingPrice.multiply(DEPOSIT_PERCENTAGE);
-        BigDecimal remainingAmount = bookingPrice.subtract(depositAmount);
+        BookingCouponValidationResponse couponValidation = null;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        BigDecimal totalPrice = bookingPrice;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            couponValidation = couponRedemptionService.consumeCouponForBooking(
+                    request.getCouponCode(),
+                    savedBooking,
+                    accountId,
+                    bookingPrice
+            );
+            discountAmount = couponValidation.getDiscountAmount();
+            totalPrice = couponValidation.getDiscountedTotal();
+        }
+
+        BigDecimal depositAmount = totalPrice.multiply(DEPOSIT_PERCENTAGE);
+        BigDecimal remainingAmount = totalPrice.subtract(depositAmount);
         
         savedBooking.setBookingPrice(bookingPrice);
-        savedBooking.setTotalPrice(bookingPrice);
+        savedBooking.setTotalPrice(totalPrice);
+        savedBooking.setDiscountAmount(discountAmount);
         savedBooking.setDepositAmount(depositAmount);
         savedBooking.setRemainingAmount(remainingAmount);
+        savedBooking.setAppliedCouponCode(couponValidation != null ? couponValidation.getCouponCode() : null);
         bookingRepository.save(savedBooking);
 
         // Create payment transaction for deposit (not full price)
@@ -171,7 +191,14 @@ public class BookingServiceImpl implements BookingService {
             response.setPayments(List.of(payment));
         }
         response.setCars(carResponses);
+        response.setPricingMessage(couponValidation != null ? couponValidation.getMessage() : null);
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingCouponValidationResponse validateCoupon(BookingCouponValidationRequest request, UUID accountId) {
+        return couponRedemptionService.validateCoupon(request, accountId);
     }
 
     private List<UUID> resolveSelectedCarIds(CreateBookingRequest request, LocalDateTime pickup, LocalDateTime returnDt) {

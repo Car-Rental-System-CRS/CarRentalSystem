@@ -37,6 +37,7 @@ const ADMIN_SCOPE_GROUPS: { label: string; scopes: string[] }[] = [
   { label: 'Dashboard', scopes: ['DASHBOARD_VIEW'] },
   { label: 'User Management', scopes: ['USER_VIEW', 'USER_EDIT', 'USER_ROLE_ASSIGN'] },
   { label: 'Role Management', scopes: ['ROLE_VIEW', 'ROLE_CREATE', 'ROLE_EDIT', 'ROLE_DELETE'] },
+  { label: 'Discount Campaigns', scopes: ['DISCOUNT_CAMPAIGN_MANAGE'] },
 ];
 
 export default function EditRolePage({ params }: { params: Promise<{ id: string }> }) {

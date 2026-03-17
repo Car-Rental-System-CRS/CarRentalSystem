@@ -6,7 +6,26 @@ export interface CreateBookingRequest {
   selectedCarIds?: string[];
   expectedReceiveDate: string; // ISO datetime format
   expectedReturnDate: string; // ISO datetime format
+  couponCode?: string;
   payNow: boolean;
+}
+
+export interface BookingCouponValidationRequest {
+  carTypeId: string;
+  quantity: number;
+  selectedCarIds?: string[];
+  expectedReceiveDate: string;
+  expectedReturnDate: string;
+  couponCode: string;
+}
+
+export interface BookingCouponValidationResponse {
+  valid: boolean;
+  couponCode: string | null;
+  originalTotal: number;
+  discountAmount: number;
+  discountedTotal: number;
+  message: string;
 }
 
 export interface MediaFileResponse {
@@ -54,9 +73,12 @@ export interface BookingResponse {
   cars: CarResponse[];
   totalPrice: number;
   bookingPrice: number;
+  discountAmount: number;
   depositAmount: number;
   remainingAmount: number;
   overdueCharge: number | null;
+  appliedCouponCode: string | null;
+  pricingMessage: string | null;
   expectedReceiveDate: string;
   expectedReturnDate: string;
   actualReceiveDate: string | null;
@@ -74,6 +96,13 @@ export const createBooking = async (
   request: CreateBookingRequest
 ): Promise<BookingResponse> => {
   const response = await axiosInstance.post<BookingResponse>('/api/bookings', request);
+  return response.data;
+};
+
+export const validateBookingCoupon = async (
+  request: BookingCouponValidationRequest
+): Promise<BookingCouponValidationResponse> => {
+  const response = await axiosInstance.post<BookingCouponValidationResponse>('/api/bookings/coupon-validation', request);
   return response.data;
 };
 

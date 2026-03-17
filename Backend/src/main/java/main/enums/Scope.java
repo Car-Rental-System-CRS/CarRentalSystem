@@ -38,7 +38,9 @@ public enum Scope {
     ROLE_VIEW,
     ROLE_CREATE,
     ROLE_EDIT,
-    ROLE_DELETE;
+    ROLE_DELETE,
+
+    DISCOUNT_CAMPAIGN_MANAGE;
 
     /**
      * Returns true if this scope belongs to the STAFF base role.
