@@ -18,12 +18,12 @@ public class DashboardStatsResponse {
 
     private ReportingPeriod reportingPeriod;
     private List<SummaryCard> summaryCards;
-    private List<MonthlyRevenue> revenueByMonth;
+    private List<DailyRevenue> revenueByDate;
     private List<StatusCount> bookingsByStatus;
     private List<MonthlyCount> bookingsByMonth;
     private List<CarTypeCount> topCarTypes;
     private List<StatusCount> paymentsByStatus;
-    private List<MonthlyCount> userRegistrationsByMonth;
+    private List<DailyCount> userRegistrationsByDate;
     private List<RecentBooking> recentBookings;
     private List<RecentPayment> recentPayments;
     private DiscountCampaignMetrics discountCampaignMetrics;
@@ -62,8 +62,8 @@ public class DashboardStatsResponse {
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class MonthlyRevenue {
-        private String month;       // e.g. "2026-01"
+    public static class DailyRevenue {
+        private String date;        // e.g. "2026-03-17"
         private BigDecimal revenue;
     }
 
@@ -84,6 +84,16 @@ public class DashboardStatsResponse {
     @NoArgsConstructor
     public static class MonthlyCount {
         private String month;       // e.g. "2026-01"
+        private long count;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DailyCount {
+        private String date;        // e.g. "2026-03-17"
         private long count;
     }
 

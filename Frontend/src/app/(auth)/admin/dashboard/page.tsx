@@ -33,9 +33,11 @@ import { Button } from '@/components/ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboardService } from '@/services/dashboardService';
 import {
+  formatChartDate,
   formatChartCurrency,
   formatCompactNumber,
   formatCurrency,
+  formatShortDate,
 } from '@/lib/dashboard';
 import { DashboardStats } from '@/types/dashboard';
 
@@ -139,6 +141,9 @@ export default function AdminDashboardPage() {
     return null;
   }
 
+  const revenueTrend = stats.revenueByDate ?? [];
+  const customerGrowthTrend = stats.userRegistrationsByDate ?? [];
+
   return (
     <div className="space-y-6">
       <DashboardHeader
@@ -196,11 +201,11 @@ export default function AdminDashboardPage() {
               <TrendSection
                 description="Track revenue performance over the selected reporting period."
                 emptyMessage="No revenue activity in this reporting period."
-                hasData={stats.revenueByMonth.length > 0}
+                hasData={revenueTrend.length > 0}
                 title="Revenue trend"
               >
                 <ResponsiveContainer height={320} width="100%">
-                  <AreaChart data={stats.revenueByMonth}>
+                  <AreaChart data={revenueTrend}>
                     <defs>
                       <linearGradient id="revenueGradient" x1="0" x2="0" y1="0" y2="1">
                         <stop offset="5%" stopColor="#0f766e" stopOpacity={0.3} />
@@ -208,12 +213,17 @@ export default function AdminDashboardPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={formatChartDate}
+                    />
                     <YAxis
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => formatCompactNumber(value)}
                     />
                     <Tooltip
+                      labelFormatter={(value) => formatShortDate(String(value))}
                       formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Revenue']}
                     />
                     <Area
@@ -311,15 +321,19 @@ export default function AdminDashboardPage() {
               <TrendSection
                 description="Track customer registration momentum during the selected period."
                 emptyMessage="No new customer registrations in this reporting period."
-                hasData={stats.userRegistrationsByMonth.length > 0}
+                hasData={customerGrowthTrend.length > 0}
                 title="Customer growth"
               >
                 <ResponsiveContainer height={320} width="100%">
-                  <LineChart data={stats.userRegistrationsByMonth}>
+                  <LineChart data={customerGrowthTrend}>
                     <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={formatChartDate}
+                    />
                     <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
+                    <Tooltip labelFormatter={(value) => formatShortDate(String(value))} />
                     <Line
                       dataKey="count"
                       dot={{ r: 4 }}

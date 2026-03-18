@@ -54,6 +54,14 @@ export function formatShortDate(value: string | null): string {
   }
 }
 
+export function formatChartDate(value: string): string {
+  try {
+    return format(new Date(`${value}T00:00:00`), 'MMM dd');
+  } catch {
+    return value;
+  }
+}
+
 export function getBookingStatusClasses(status: string): string {
   const styles: Record<string, string> = {
     COMPLETED: 'bg-emerald-100 text-emerald-700 ring-emerald-600/20',

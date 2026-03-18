@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useBooking } from '@/contexts/BookingContext';
+import { CartItem } from '@/types/booking';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -31,12 +32,24 @@ export default function CheckoutClient() {
   const [couponCode, setCouponCode] = useState('');
   const [couponPreview, setCouponPreview] = useState<BookingCouponValidationResponse | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [checkoutItemSnapshot, setCheckoutItemSnapshot] = useState<CartItem | null>(null);
 
   // Find the specific cart item to checkout
   const cartItem = useMemo(() => {
     if (!cartItemId) return null;
-    return cartItems.find((item) => item.id === decodeURIComponent(cartItemId));
+    return cartItems.find((item) => item.id === decodeURIComponent(cartItemId)) ?? null;
   }, [cartItemId, cartItems]);
+
+  useEffect(() => {
+    if (cartItem) {
+      setCheckoutItemSnapshot(cartItem);
+    }
+  }, [cartItem]);
+
+  const checkoutItem = cartItem ?? checkoutItemSnapshot;
+  const trimmedCouponCode = couponCode.trim();
+  const hasAppliedCoupon =
+    Boolean(couponPreview?.valid) && couponPreview?.couponCode === trimmedCouponCode;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -64,7 +77,7 @@ export default function CheckoutClient() {
   };
 
   const handleSubmit = async (payNow: boolean) => {
-    if (!cartItem) {
+    if (!checkoutItem) {
       toast.error('No booking item found');
       return;
     }
@@ -74,17 +87,17 @@ export default function CheckoutClient() {
     try {
       // Create booking via API
       const bookingResponse = await createBooking({
-        carTypeId: cartItem.carTypeId,
-        quantity: cartItem.selectedCarIds?.length || cartItem.quantity,
-        selectedCarIds: cartItem.selectedCarIds,
-        expectedReceiveDate: cartItem.pickupDateTime.toISOString(),
-        expectedReturnDate: cartItem.returnDateTime.toISOString(),
-        couponCode: couponPreview?.valid ? couponCode : undefined,
+        carTypeId: checkoutItem.carTypeId,
+        quantity: checkoutItem.selectedCarIds?.length || checkoutItem.quantity,
+        selectedCarIds: checkoutItem.selectedCarIds,
+        expectedReceiveDate: checkoutItem.pickupDateTime.toISOString(),
+        expectedReturnDate: checkoutItem.returnDateTime.toISOString(),
+        couponCode: hasAppliedCoupon ? trimmedCouponCode : undefined,
         payNow,
       });
 
       // Remove item from cart after successful booking
-      removeFromCart(cartItem.id);
+      removeFromCart(checkoutItem.id);
 
       if (payNow) {
         // Redirect to payment URL
@@ -115,7 +128,7 @@ export default function CheckoutClient() {
         toast.error('Selected cars are no longer available', {
           description: 'Please re-select available cars for your booking period.',
         });
-        router.push(`/vehicles/${cartItem.carTypeId}`);
+        router.push(`/vehicles/${checkoutItem.carTypeId}`);
         return;
       }
       handleError(error, 'Failed to create booking');
@@ -125,7 +138,7 @@ export default function CheckoutClient() {
   };
 
   const handleValidateCoupon = async () => {
-    if (!cartItem || !couponCode.trim()) {
+    if (!checkoutItem || !trimmedCouponCode) {
       setCouponPreview(null);
       return;
     }
@@ -133,12 +146,12 @@ export default function CheckoutClient() {
     setValidatingCoupon(true);
     try {
       const preview = await validateBookingCoupon({
-        carTypeId: cartItem.carTypeId,
-        quantity: cartItem.selectedCarIds?.length || cartItem.quantity,
-        selectedCarIds: cartItem.selectedCarIds,
-        expectedReceiveDate: cartItem.pickupDateTime.toISOString(),
-        expectedReturnDate: cartItem.returnDateTime.toISOString(),
-        couponCode: couponCode.trim(),
+        carTypeId: checkoutItem.carTypeId,
+        quantity: checkoutItem.selectedCarIds?.length || checkoutItem.quantity,
+        selectedCarIds: checkoutItem.selectedCarIds,
+        expectedReceiveDate: checkoutItem.pickupDateTime.toISOString(),
+        expectedReturnDate: checkoutItem.returnDateTime.toISOString(),
+        couponCode: trimmedCouponCode,
       });
       setCouponPreview(preview);
       if (preview.valid) {
@@ -154,7 +167,9 @@ export default function CheckoutClient() {
     }
   };
 
-  const payableTotal = couponPreview?.valid ? couponPreview.discountedTotal : cartItem.totalPrice;
+  const payableTotal = hasAppliedCoupon
+    ? couponPreview?.discountedTotal ?? checkoutItem?.totalPrice ?? 0
+    : checkoutItem?.totalPrice ?? 0;
   const depositAmount = payableTotal * DEPOSIT_PERCENTAGE;
   const remainingAmount = payableTotal - depositAmount;
 
@@ -174,7 +189,7 @@ export default function CheckoutClient() {
   }
 
   // Cart item not found
-  if (!cartItem) {
+  if (!checkoutItem) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
@@ -271,14 +286,17 @@ export default function CheckoutClient() {
                     <Input
                       id="couponCode"
                       value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
+                      onChange={(e) => {
+                        setCouponCode(e.target.value);
+                        setCouponPreview(null);
+                      }}
                       placeholder="Enter your coupon code"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleValidateCoupon}
-                      disabled={validatingCoupon || !couponCode.trim()}
+                      disabled={validatingCoupon || !trimmedCouponCode}
                     >
                       {validatingCoupon ? 'Checking...' : 'Apply'}
                     </Button>
@@ -350,12 +368,12 @@ export default function CheckoutClient() {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold text-lg">{cartItem.carTypeName}</h4>
+                    <h4 className="font-semibold text-lg">{checkoutItem.carTypeName}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {cartItem.quantity} car{cartItem.quantity > 1 ? 's' : ''}
+                      {checkoutItem.quantity} car{checkoutItem.quantity > 1 ? 's' : ''}
                     </p>
                   </div>
-                  <Badge variant="secondary">${cartItem.pricePerHour}/hr</Badge>
+                  <Badge variant="secondary">${checkoutItem.pricePerHour}/hr</Badge>
                 </div>
 
                 <Separator />
@@ -366,7 +384,7 @@ export default function CheckoutClient() {
                     <div>
                       <p className="font-medium">Pickup</p>
                       <p className="text-muted-foreground">
-                        {format(cartItem.pickupDateTime, 'MMM dd, yyyy - HH:mm')}
+                        {format(checkoutItem.pickupDateTime, 'MMM dd, yyyy - HH:mm')}
                       </p>
                     </div>
                   </div>
@@ -375,7 +393,7 @@ export default function CheckoutClient() {
                     <div>
                       <p className="font-medium">Return</p>
                       <p className="text-muted-foreground">
-                        {format(cartItem.returnDateTime, 'MMM dd, yyyy - HH:mm')}
+                        {format(checkoutItem.returnDateTime, 'MMM dd, yyyy - HH:mm')}
                       </p>
                     </div>
                   </div>
@@ -387,24 +405,24 @@ export default function CheckoutClient() {
                   <div className="flex justify-between">
                     <span>Duration</span>
                     <span>
-                      {cartItem.totalDays > 0 && `${cartItem.totalDays} day${cartItem.totalDays !== 1 ? 's' : ''} `}
-                      {cartItem.remainingHours > 0 && `${cartItem.remainingHours} hr${cartItem.remainingHours !== 1 ? 's' : ''}`}
+                      {checkoutItem.totalDays > 0 && `${checkoutItem.totalDays} day${checkoutItem.totalDays !== 1 ? 's' : ''} `}
+                      {checkoutItem.remainingHours > 0 && `${checkoutItem.remainingHours} hr${checkoutItem.remainingHours !== 1 ? 's' : ''}`}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Cars</span>
-                    <span>{cartItem.quantity}</span>
+                    <span>{checkoutItem.quantity}</span>
                   </div>
-                  {cartItem.totalDays > 0 && (
+                  {checkoutItem.totalDays > 0 && (
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Day rate × {cartItem.totalDays}</span>
-                      <span>${(cartItem.pricePerDay * cartItem.totalDays * cartItem.quantity).toFixed(2)}</span>
+                      <span>Day rate × {checkoutItem.totalDays}</span>
+                      <span>${(checkoutItem.pricePerDay * checkoutItem.totalDays * checkoutItem.quantity).toFixed(2)}</span>
                     </div>
                   )}
-                  {cartItem.remainingHours > 0 && (
+                  {checkoutItem.remainingHours > 0 && (
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Hourly rate × {cartItem.remainingHours}</span>
-                      <span>${(cartItem.pricePerHour * cartItem.remainingHours * cartItem.quantity).toFixed(2)}</span>
+                      <span>Hourly rate × {checkoutItem.remainingHours}</span>
+                      <span>${(checkoutItem.pricePerHour * checkoutItem.remainingHours * checkoutItem.quantity).toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -424,11 +442,11 @@ export default function CheckoutClient() {
                   )}
                   <div className="flex justify-between text-primary font-medium">
                     <span>Deposit (30%)</span>
-                    <span>${(cartItem.totalPrice * DEPOSIT_PERCENTAGE).toFixed(2)}</span>
+                    <span>${depositAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Due at pickup</span>
-                    <span>${(cartItem.totalPrice * (1 - DEPOSIT_PERCENTAGE)).toFixed(2)}</span>
+                    <span>${remainingAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

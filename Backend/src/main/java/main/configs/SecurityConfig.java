@@ -1,5 +1,6 @@
 package main.configs;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
+                // Allow MVC async/error redispatches after the initial secured request succeeds.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
                 .requestMatchers(PUBLIC_APIS).permitAll()
                 .anyRequest().authenticated()

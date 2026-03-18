@@ -36,14 +36,14 @@ public interface PaymentTransactionRepository
 
     boolean existsByBookingIdAndPurpose(UUID bookingId, PaymentPurpose purpose);
 
-    // Dashboard: revenue by month (PAID only) within date range
-    @Query(value = "SELECT FORMAT(pt.created_at, 'yyyy-MM') AS month, SUM(pt.amount) AS revenue " +
+    // Dashboard: revenue by date (PAID only) within date range
+    @Query(value = "SELECT CONVERT(varchar(10), CAST(pt.created_at AS date), 23) AS bucket_date, SUM(pt.amount) AS revenue " +
            "FROM payment_transactions pt " +
            "WHERE pt.status = 'PAID' " +
            "AND pt.created_at >= :start AND pt.created_at <= :end " +
-           "GROUP BY FORMAT(pt.created_at, 'yyyy-MM') " +
-           "ORDER BY month", nativeQuery = true)
-    List<Object[]> revenueByMonthBetween(@Param("start") java.time.Instant start, @Param("end") java.time.Instant end);
+           "GROUP BY CONVERT(varchar(10), CAST(pt.created_at AS date), 23) " +
+           "ORDER BY bucket_date", nativeQuery = true)
+    List<Object[]> revenueByDateBetween(@Param("start") java.time.Instant start, @Param("end") java.time.Instant end);
 
     // Dashboard: payments grouped by status within date range
     @Query("SELECT pt.status AS status, COUNT(pt) AS cnt FROM PaymentTransaction pt " +

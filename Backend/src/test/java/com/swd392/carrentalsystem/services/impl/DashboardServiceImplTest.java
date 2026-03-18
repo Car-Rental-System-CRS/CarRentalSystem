@@ -70,9 +70,9 @@ class DashboardServiceImplTest {
         UUID bookingId = UUID.randomUUID();
         UUID paymentId = UUID.randomUUID();
 
-        when(paymentTransactionRepository.revenueByMonthBetween(any(), any()))
-                .thenReturn(List.<Object[]>of(new Object[]{"2026-03", BigDecimal.valueOf(125000)}))
-                .thenReturn(List.<Object[]>of(new Object[]{"2026-02", BigDecimal.valueOf(100000)}));
+        when(paymentTransactionRepository.revenueByDateBetween(any(), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{"2026-03-15", BigDecimal.valueOf(125000)}))
+                .thenReturn(List.<Object[]>of(new Object[]{"2026-02-14", BigDecimal.valueOf(100000)}));
         when(bookingRepository.countByStatusBetween(any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{BookingStatus.CONFIRMED, 3L}));
         when(bookingRepository.countByMonthBetween(any(), any()))
@@ -86,9 +86,9 @@ class DashboardServiceImplTest {
                         new Object[]{PaymentStatus.PENDING, 1L}
                 ))
                 .thenReturn(List.<Object[]>of(new Object[]{PaymentStatus.PAID, 4L}));
-        when(accountRepository.countRegistrationsByMonthBetween(any(), any()))
-                .thenReturn(List.<Object[]>of(new Object[]{"2026-03", 4L}))
-                .thenReturn(List.<Object[]>of(new Object[]{"2026-02", 2L}));
+        when(accountRepository.countRegistrationsByDateBetween(any(), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{"2026-03-18", 4L}))
+                .thenReturn(List.<Object[]>of(new Object[]{"2026-02-18", 2L}));
         when(bookingRepository.findRecentBookings(any(), any()))
                 .thenReturn(List.of(buildBooking(bookingId, "Jane Doe", "SUV", BookingStatus.CONFIRMED)));
         when(paymentTransactionRepository.findRecentPayments(any(), any()))
@@ -121,9 +121,9 @@ class DashboardServiceImplTest {
 
     @Test
     void getDashboardStats_ShouldMarkRevenueCriticalAndKeepCollectionsPopulated_WhenCurrentPeriodDropsToZero() {
-        when(paymentTransactionRepository.revenueByMonthBetween(any(), any()))
+        when(paymentTransactionRepository.revenueByDateBetween(any(), any()))
                 .thenReturn(List.of())
-                .thenReturn(List.<Object[]>of(new Object[]{"2026-02", BigDecimal.valueOf(90000)}));
+                .thenReturn(List.<Object[]>of(new Object[]{"2026-02-12", BigDecimal.valueOf(90000)}));
         when(bookingRepository.countByStatusBetween(any(), any()))
                 .thenReturn(List.of());
         when(bookingRepository.countByMonthBetween(any(), any()))
@@ -134,9 +134,9 @@ class DashboardServiceImplTest {
         when(paymentTransactionRepository.countByStatusBetween(any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{PaymentStatus.PENDING, 2L}))
                 .thenReturn(List.<Object[]>of(new Object[]{PaymentStatus.PAID, 2L}));
-        when(accountRepository.countRegistrationsByMonthBetween(any(), any()))
+        when(accountRepository.countRegistrationsByDateBetween(any(), any()))
                 .thenReturn(List.of())
-                .thenReturn(List.<Object[]>of(new Object[]{"2026-02", 1L}));
+                .thenReturn(List.<Object[]>of(new Object[]{"2026-02-09", 1L}));
         when(bookingRepository.findRecentBookings(any(), any())).thenReturn(List.of());
         when(paymentTransactionRepository.findRecentPayments(any(), any())).thenReturn(List.of());
         when(discountCampaignRepository.findRelevantCampaignsForPeriod(any(), any(), any(), any()))

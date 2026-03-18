@@ -121,7 +121,7 @@ export default function DiscountCampaignForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="minimumBookingAmount">Minimum Booking Amount</Label>
+            <Label htmlFor="minimumBookingAmount">Minimum Booking</Label>
             <Input
               id="minimumBookingAmount"
               type="number"

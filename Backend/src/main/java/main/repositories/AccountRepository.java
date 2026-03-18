@@ -24,14 +24,14 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
            "AND (:baseRole IS NULL OR a.role = :baseRole)")
     Page<Account> findAllWithFilters(@Param("search") String search, @Param("baseRole") Role baseRole, Pageable pageable);
 
-    // Dashboard: user registrations by month within date range
-    @Query(value = "SELECT FORMAT(a.created_at, 'yyyy-MM') AS month, COUNT(*) AS cnt " +
+    // Dashboard: user registrations by date within date range
+    @Query(value = "SELECT CONVERT(varchar(10), CAST(a.created_at AS date), 23) AS bucket_date, COUNT(*) AS cnt " +
            "FROM accounts a " +
            "WHERE a.role = 'USER' " +
            "AND a.created_at >= :start AND a.created_at <= :end " +
-           "GROUP BY FORMAT(a.created_at, 'yyyy-MM') " +
-           "ORDER BY month", nativeQuery = true)
-    List<Object[]> countRegistrationsByMonthBetween(
+           "GROUP BY CONVERT(varchar(10), CAST(a.created_at AS date), 23) " +
+           "ORDER BY bucket_date", nativeQuery = true)
+    List<Object[]> countRegistrationsByDateBetween(
             @Param("start") java.time.Instant start,
             @Param("end") java.time.Instant end
     );

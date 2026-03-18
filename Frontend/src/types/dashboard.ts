@@ -1,5 +1,5 @@
-export interface MonthlyRevenue {
-  month: string;
+export interface DailyRevenue {
+  date: string;
   revenue: number;
 }
 
@@ -13,6 +13,11 @@ export interface StatusCount {
 
 export interface MonthlyCount {
   month: string;
+  count: number;
+}
+
+export interface DailyCount {
+  date: string;
   count: number;
 }
 
@@ -100,12 +105,14 @@ export interface DiscountCampaignMetrics {
 export interface DashboardStats {
   reportingPeriod: ReportingPeriod;
   summaryCards: DashboardSummaryCard[];
-  revenueByMonth: MonthlyRevenue[];
+  revenueByDate?: DailyRevenue[];
+  revenueByMonth?: { month: string; revenue: number }[];
   bookingsByStatus: StatusCount[];
   bookingsByMonth: MonthlyCount[];
   topCarTypes: CarTypeCount[];
   paymentsByStatus: StatusCount[];
-  userRegistrationsByMonth: MonthlyCount[];
+  userRegistrationsByDate?: DailyCount[];
+  userRegistrationsByMonth?: MonthlyCount[];
   recentBookings: RecentBooking[];
   recentPayments: RecentPayment[];
   discountCampaignMetrics: DiscountCampaignMetrics;

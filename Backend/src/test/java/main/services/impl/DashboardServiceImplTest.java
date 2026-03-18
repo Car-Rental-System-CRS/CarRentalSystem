@@ -208,12 +208,12 @@ class DashboardServiceImplTest {
     }
 
     private void stubCoreDashboardData() {
-        when(paymentTransactionRepository.revenueByMonthBetween(any(), any())).thenReturn(List.of());
+        when(paymentTransactionRepository.revenueByDateBetween(any(), any())).thenReturn(List.of());
         when(bookingRepository.countByStatusBetween(any(), any())).thenReturn(List.of());
         when(bookingRepository.countByMonthBetween(any(), any())).thenReturn(List.of());
         when(bookingCarRepository.topCarTypesBetween(any(), any())).thenReturn(List.of());
         when(paymentTransactionRepository.countByStatusBetween(any(), any())).thenReturn(List.of());
-        when(accountRepository.countRegistrationsByMonthBetween(any(), any())).thenReturn(List.of());
+        when(accountRepository.countRegistrationsByDateBetween(any(), any())).thenReturn(List.of());
         when(bookingRepository.findRecentBookings(any(), any())).thenReturn(List.of());
         when(paymentTransactionRepository.findRecentPayments(any(), any())).thenReturn(List.of());
     }

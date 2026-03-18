@@ -143,45 +143,6 @@ export default function BookingInfoCard({ booking }: Props) {
           )}
         </div>
       )}
-
-      {latestNotifications.length > 0 && (
-        <div className="pt-2 border-t border-gray-100">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Notification Status</h4>
-          <div className="space-y-2">
-            {latestNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatEventLabel(notification.eventType)}
-                  </span>
-                  <span
-                    className={`text-xs font-semibold uppercase ${
-                      notification.deliveryStatus === 'SENT'
-                        ? 'text-green-600'
-                        : notification.deliveryStatus === 'FAILED'
-                          ? 'text-red-600'
-                          : notification.deliveryStatus === 'SKIPPED'
-                            ? 'text-amber-600'
-                            : 'text-gray-500'
-                    }`}
-                  >
-                    {notification.deliveryStatus}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Triggered: {formatDateTime(notification.triggeredAt)}
-                </p>
-                {notification.failureReason && (
-                  <p className="mt-1 text-xs text-red-600">{notification.failureReason}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

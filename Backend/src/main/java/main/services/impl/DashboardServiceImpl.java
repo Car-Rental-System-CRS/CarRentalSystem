@@ -29,9 +29,10 @@ import main.dtos.response.DashboardStatsResponse.CampaignMetricsEmptyState;
 import main.dtos.response.DashboardStatsResponse.CampaignPerformanceEntry;
 import main.dtos.response.DashboardStatsResponse.CampaignTrendPoint;
 import main.dtos.response.DashboardStatsResponse.CarTypeCount;
+import main.dtos.response.DashboardStatsResponse.DailyCount;
+import main.dtos.response.DashboardStatsResponse.DailyRevenue;
 import main.dtos.response.DashboardStatsResponse.DiscountCampaignMetrics;
 import main.dtos.response.DashboardStatsResponse.MonthlyCount;
-import main.dtos.response.DashboardStatsResponse.MonthlyRevenue;
 import main.dtos.response.DashboardStatsResponse.RecentBooking;
 import main.dtos.response.DashboardStatsResponse.RecentPayment;
 import main.dtos.response.DashboardStatsResponse.ReportingPeriod;
@@ -80,26 +81,26 @@ public class DashboardServiceImpl implements DashboardService {
         Instant previousEnd = startDate.minus(1, ChronoUnit.SECONDS);
         Instant previousStart = previousEnd.minus(ChronoUnit.MILLIS.between(startDate, endDate), ChronoUnit.MILLIS);
 
-        List<MonthlyRevenue> revenueByMonth = getRevenueByMonth(startDate, endDate);
+        List<DailyRevenue> revenueByDate = getRevenueByDate(startDate, endDate);
         List<StatusCount> bookingsByStatus = getBookingsByStatus(startDate, endDate);
         List<MonthlyCount> bookingsByMonth = getBookingsByMonth(startDate, endDate);
         List<CarTypeCount> topCarTypes = getTopCarTypes(startDate, endDate);
         List<StatusCount> paymentsByStatus = getPaymentsByStatus(startDate, endDate);
-        List<MonthlyCount> userRegistrationsByMonth = getUserRegistrationsByMonth(startDate, endDate);
+        List<DailyCount> userRegistrationsByDate = getUserRegistrationsByDate(startDate, endDate);
         List<RecentBooking> recentBookings = getRecentBookings(startDate, endDate);
         List<RecentPayment> recentPayments = getRecentPayments(startDate, endDate);
 
         DashboardSnapshot currentSnapshot = buildSnapshot(
-                revenueByMonth,
+                revenueByDate,
                 bookingsByMonth,
                 paymentsByStatus,
-                userRegistrationsByMonth
+                userRegistrationsByDate
         );
         DashboardSnapshot previousSnapshot = buildSnapshot(
-                getRevenueByMonth(previousStart, previousEnd),
+                getRevenueByDate(previousStart, previousEnd),
                 getBookingsByMonth(previousStart, previousEnd),
                 getPaymentsByStatus(previousStart, previousEnd),
-                getUserRegistrationsByMonth(previousStart, previousEnd)
+                getUserRegistrationsByDate(previousStart, previousEnd)
         );
 
         DiscountCampaignMetrics campaignMetrics = buildDiscountCampaignMetrics(startDate, endDate, previousStart, previousEnd);
@@ -107,12 +108,12 @@ public class DashboardServiceImpl implements DashboardService {
         return DashboardStatsResponse.builder()
                 .reportingPeriod(buildReportingPeriod(startDate, endDate, previousStart, previousEnd))
                 .summaryCards(buildSummaryCards(currentSnapshot, previousSnapshot))
-                .revenueByMonth(revenueByMonth)
+                .revenueByDate(revenueByDate)
                 .bookingsByStatus(bookingsByStatus)
                 .bookingsByMonth(bookingsByMonth)
                 .topCarTypes(topCarTypes)
                 .paymentsByStatus(paymentsByStatus)
-                .userRegistrationsByMonth(userRegistrationsByMonth)
+                .userRegistrationsByDate(userRegistrationsByDate)
                 .recentBookings(recentBookings)
                 .recentPayments(recentPayments)
                 .discountCampaignMetrics(campaignMetrics)
@@ -321,21 +322,21 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private DashboardSnapshot buildSnapshot(
-            List<MonthlyRevenue> revenueByMonth,
+            List<DailyRevenue> revenueByDate,
             List<MonthlyCount> bookingsByMonth,
             List<StatusCount> paymentsByStatus,
-            List<MonthlyCount> userRegistrationsByMonth
+            List<DailyCount> userRegistrationsByDate
     ) {
-        BigDecimal revenue = revenueByMonth.stream()
-                .map(MonthlyRevenue::getRevenue)
+        BigDecimal revenue = revenueByDate.stream()
+                .map(DailyRevenue::getRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long bookings = bookingsByMonth.stream()
                 .mapToLong(MonthlyCount::getCount)
                 .sum();
 
-        long registrations = userRegistrationsByMonth.stream()
-                .mapToLong(MonthlyCount::getCount)
+        long registrations = userRegistrationsByDate.stream()
+                .mapToLong(DailyCount::getCount)
                 .sum();
 
         long paidPayments = findStatusCount(paymentsByStatus, "PAID");
@@ -624,11 +625,11 @@ public class DashboardServiceImpl implements DashboardService {
                 .collect(Collectors.toList());
     }
 
-    private List<MonthlyRevenue> getRevenueByMonth(Instant start, Instant end) {
-        return paymentTransactionRepository.revenueByMonthBetween(start, end)
+    private List<DailyRevenue> getRevenueByDate(Instant start, Instant end) {
+        return paymentTransactionRepository.revenueByDateBetween(start, end)
                 .stream()
-                .map(row -> MonthlyRevenue.builder()
-                        .month((String) row[0])
+                .map(row -> DailyRevenue.builder()
+                        .date((String) row[0])
                         .revenue(row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO)
                         .build())
                 .collect(Collectors.toList());
@@ -675,11 +676,11 @@ public class DashboardServiceImpl implements DashboardService {
                 .collect(Collectors.toList());
     }
 
-    private List<MonthlyCount> getUserRegistrationsByMonth(Instant start, Instant end) {
-        return accountRepository.countRegistrationsByMonthBetween(start, end)
+    private List<DailyCount> getUserRegistrationsByDate(Instant start, Instant end) {
+        return accountRepository.countRegistrationsByDateBetween(start, end)
                 .stream()
-                .map(row -> MonthlyCount.builder()
-                        .month((String) row[0])
+                .map(row -> DailyCount.builder()
+                        .date((String) row[0])
                         .count(((Number) row[1]).longValue())
                         .build())
                 .collect(Collectors.toList());
